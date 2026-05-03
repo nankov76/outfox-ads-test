@@ -1,0 +1,5 @@
+.DS_Store
+*.BACKUP-*.html
+*.CHECKPOINT-*.html
+node_modules/
+.env
