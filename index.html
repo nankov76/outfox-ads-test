@@ -56,13 +56,23 @@ const HELP_CONTENT={
         items:[
           '<strong>✨ AI Анализ:</strong> Пълен Claude Opus 4.7 doклад с препоръки',
           '<strong>📘 Playbook (per-brand):</strong> Един клик в header-а на бранд карта генерира стратегически playbook за този конкурент — top hooks анализ, оферти стратегия, слабости, контра-стъпки. Печатaем като PDF (🖨 в модала).',
+          '<strong>📊 Пълен отчет:</strong> Генерира принтируем HTML отчет с всички брандове, реклами, benchmarks и оферти. Може да се принтира като PDF или да се свали като standalone HTML файл.',
+          '<strong>🧪 A/B Variant Inspector:</strong> Показва всички детектирани A/B клъстери от текущия скан — страничен изглед с два варианта едновременно и word-level diff highlighting за да видиш точно какво се тества.',
           '<strong>🔍 Търси shadow:</strong> Стартира Shadow Discovery — намира скрити страници с подобни hooks',
           '<strong>📄 Свали отчет ▾:</strong> HTML / Markdown / PDF / Top Creatives CSV',
           '<strong>💾 Запази скан:</strong> Архивира за сравнение + AI history',
           '<strong>Focus:</strong> Скрива всичко освен winner + нови реклами',
-          '<strong>⏰ Автосканиране:</strong> Настроишься интервала в API Tokens → Автоматичен скан и активирай за фоново мониториране',
+          '<strong>⏰ Автосканиране:</strong> Настроишься интервала в API Tokens → Автоматичен скан (6ч/12ч/24ч/48ч) и активирай за фоново мониториране без да отваряш приложението',
           '<strong>Сортирай:</strong> Dropdown в brand filter row подрежда картите по брой реклами, нови (7д), est. spend, winner longevity или азбучно — запазва се в localStorage',
           '<strong>Multi-select (bulk):</strong> Кликни чекбокса горе-вляво на реклама (□) за да я маркираш. При 2+ избрани се появява плаваща лента отдолу с действия: ⭐ Към Swipe, ⇄ Сравни (макс 4), ⬇ Експорт CSV, 📋 Копирай текст. <kbd>Esc</kbd> изчиства избора.'
+        ]
+      },
+      {
+        title:'Разширени филтри и Saved Presets',
+        items:[
+          '<strong>Разширен филтър панел:</strong> Кликни "⚙ Филтри" за да разгънеш панела с: range slider за дни активна реклама, WPS tier multi-checkbox (Premium/Watch/Ignore), "Само с оферта" toggle, платформа multi-select (Facebook/Instagram/Messenger), persona multi-select, "Нови от последно посещение" toggle.',
+          '<strong>Saved Filter Presets:</strong> Лилавите chips под Advanced Filters. Натисни "💾 Запази" за да запазиш комбинацията от текущите филтри + сортиране под собствено име. При следваща сесия — 1 клик върху chip за да приложиш всички настройки наведнъж.',
+          '<strong>× Remove конкурент:</strong> Chip-овете в sidebar-а имат × бутон при hover. Кликни за да премахнеш бранда от списъка с конкуренти (необратимо — може да се добави отново).'
         ]
       }
     ]
@@ -84,8 +94,10 @@ const HELP_CONTENT={
           '<strong>Heatmap фрази:</strong> Кои думи се повтарят най-много в competitor copy',
           '<strong>Search:</strong> Live търсене по copy text, hook, оферта',
           '<strong>👁 Виж:</strong> Отваря popup с вграден Meta Ad Library snapshot на рекламата — виж реалния визуален creative директно в приложението',
-          '<strong>Сортирай:</strong> Dropdown в filter row подрежда рекламите по дата, дни на живот, WPS, ALV, брой A/B варианти или бранд — работи заедно с активните филтри',
-          '<strong>Multi-select (bulk):</strong> Кликни чекбокса □ горе-вляво на всяка карта. При 2+ избрани — плаваща лента отдолу: ⭐ Към Swipe, ⇄ Сравни (макс 4), ⬇ Експорт CSV, 📋 Копирай. <kbd>Esc</kbd> = изчисти.'
+          '<strong>Сортирай:</strong> Dropdown в filter row подрежда рекламите по: Най-нови, Най-дълго активни, WPS, ALV, брой варианти, Бранд (А→Я) — 7 опции, работи заедно с активните филтри',
+          '<strong>Density toggle (Compact/Standard/Gallery):</strong> 3-бутонният превключвател до sort dropdown сменя плътността на показване — Compact (максимум карти, минимален текст), Standard (балансиран изглед), Gallery (голям preview с визуали).',
+          '<strong>Multi-select (bulk):</strong> Кликни чекбокса □ горе-вляво на всяка карта. При 2+ избрани — плаваща лента отдолу: ⭐ Към Swipe, ⇄ Сравни (макс 4), ⬇ Експорт CSV, 📋 Копирай. <kbd>Esc</kbd> = изчисти.',
+          '<strong>Tags + Boards (Swipe File):</strong> Запазените реклами в Swipe File могат да се организират в boards (папки) и да получат свободни тагове. Кликни иконката ✏ при hover за да отвориш edit модала.'
         ]
       },
       {
@@ -170,12 +182,21 @@ const HELP_CONTENT={
           '"Ако Inbet намали с >20% → ALERT"',
           '"Ако нов offer с %≥100 се появи → ALERT"'
         ]
+      },
+      {
+        title:'📱 Telegram Bot интеграция',
+        items:[
+          '<strong>Настройка:</strong> Settings → Telegram Bot Token (получи от @BotFather) + Chat ID (използвай @userinfobot за да разбереш своя).',
+          '<strong>Какво се изпраща:</strong> При тригнато alert правило → съобщение в Telegram с бранд, метрика, стойност и timestamp. При всеки успешен scan → кратко summary с нови реклами по бранд.',
+          '<strong>Тест:</strong> Бутонът "🧪 Тест" в Settings изпраща тестово съобщение за да провериш конфигурацията.',
+          '<strong>Auto-scan + Telegram:</strong> Комбинирай Auto-scan (Settings → Автоматичен скан) с Telegram за пасивен мониторинг без да отваряш приложението.'
+        ]
       }
     ]
   },
   trends:{
     label:'Тренд Анализ',
-    desc:'AI-driven анализ на дългосрочни тенденции в competitor messaging.',
+    desc:'AI-driven анализ на дългосрочни тенденции в competitor messaging. Включва Activity Heatmap за визуализация на плътността на рекламни пускания по ден.',
     sections:[
       {
         title:'Принцип на работа',
@@ -184,7 +205,9 @@ const HELP_CONTENT={
       {
         title:'🔥 Activity Heatmap',
         items:[
-          '<strong>GitHub-style calendar grid</strong> — 12 седмици × 7 дни. Всяка клетка = ден, цветовият интензитет = брой стартирани реклами.',
+          '<strong>GitHub-style calendar grid</strong> — всяка клетка = ден, цветовият интензитет = брой стартирани реклами.',
+          '<strong>Диапазон:</strong> Превключи между 4 седмици / 12 седмици / 26 седмици / 52 седмици с бутоните горе-вляво.',
+          '<strong>Два режима:</strong> 📅 <strong>Launch dates</strong> — показва кога са стартирали рекламите (от campaign start_date); 🔍 <strong>Scan history</strong> — показва кога платформата е открила/сканирала рекламите.',
           '<strong>Бранд филтър:</strong> Бутоните горе-вдясно превключват между "Всички брандове" и конкретен бранд.',
           '<strong>Hover tooltip:</strong> Задръж върху клетка за дата и точен брой реклами.',
           '<strong>Stats bar:</strong> Общо реклами, активни дни, peak ден и средно реклами/ден за периода.',
@@ -194,12 +217,12 @@ const HELP_CONTENT={
     ]
   },
   strategy:{
-    label:'Стратегия — Kanban',
-    desc:'Превръща AI анализите в actionable cards. Drag-and-drop board.',
+    label:'Стратегия — Kanban Drawer',
+    desc:'Превръща AI анализите в actionable cards. Drag-and-drop Kanban board — достъпен като страничен drawer от navbar бутона ♟.',
     sections:[
       {
         title:'Принцип на работа',
-        body:'3 колони: <strong>Идеи</strong> → <strong>В процес</strong> → <strong>Готово</strong>. Всяка карта има title, desc, brand tag, priority. Drag-and-drop за преместване.'
+        body:'Кликни бутона <strong>♟ Стратегия</strong> в navbar-а — board-ът се отваря като страничен drawer (не таб). 3 колони: <strong>Идеи</strong> → <strong>В процес</strong> → <strong>Готово</strong>. Всяка карта има title, desc, brand tag, priority. Drag-and-drop за преместване. <kbd>Esc</kbd> затваря drawer-а.'
       },
       {
         title:'Auto-import от AI',
@@ -213,15 +236,16 @@ const HELP_CONTENT={
     sections:[
       {
         title:'Принцип на работа',
-        body:'Календарът обединява 3 източника:<br>📚 <strong>Вградени</strong> (80 ключови iGaming dates: UEFA, FIFA, лиги, тенис, ОИ, сезонни)<br>🌐 <strong>Sports API</strong> (TheSportsDB — auto-fetch предстоящи мачове от 13 лиги)<br>👤 <strong>Твои</strong> (ръчно добавени, локално в localStorage)'
+        body:'Календарът обединява 3 източника:<br>📚 <strong>Вградени</strong> (80 ключови iGaming dates: UEFA, FIFA, лиги, тенис, ОИ, сезонни)<br>🌐 <strong>Sports API</strong> (TheSportsDB + опционален Football-Data.org — auto-fetch предстоящи мачове от 13 лиги)<br>👤 <strong>Твои</strong> (ръчно добавени, локално в localStorage)'
       },
       {
         title:'Действия',
         items:[
           '<strong>+ Добави:</strong> Modal за ръчно събитие — име, дата, категория, важност, иконка',
           '<strong>⚙ Управление:</strong> Списък на твоите събития с бутон Изтрий',
-          '<strong>🔄 Обнови от Sports API:</strong> Fetch-ва от TheSportsDB (Premier League, La Liga, UCL, NBA, F1, и т.н.)',
-          '<strong>Click на ден:</strong> Отваря popover с пълен списък + "+ Добави" с pre-filled дата'
+          '<strong>🔄 Обнови от Sports API:</strong> Fetch-ва от TheSportsDB (Premier League, La Liga, UCL, NBA, F1, и т.н.) с точни часове',
+          '<strong>Click на ден:</strong> Отваря popover с пълен списък + "+ Добави" с pre-filled дата',
+          '<strong>Football-Data.org интеграция (опционална):</strong> Добави API ключ в Settings → Football-Data.org за по-точни часове на срещите в БГ часова зона. Безплатен ключ се взима от football-data.org/client. Когато е наличен, бутонът "🔄 Обнови от Sports API" комбинира данни от TheSportsDB + FDO.'
         ]
       }
     ]
@@ -662,7 +686,7 @@ function updateHelpContent(tabId){
     </div>
     <div class="help-section">
       <div class="help-section-title">🎯 Глобални действия</div>
-      <button class="help-action-btn" onclick="closeHelpDrawer();openCourseModal()">🎓 Обучителен курс (10 лекции)</button>
+      <button class="help-action-btn" onclick="closeHelpDrawer();openCourseModal()">🎓 Обучителен курс (15 лекции)</button>
       <button class="help-action-btn" onclick="closeHelpDrawer();openLegendModal()">📖 Легенда — обяснение на всички символи</button>
       <button class="help-action-btn" onclick="closeHelpDrawer();startTour()">↺ Повтори обиколката</button>
       <button class="help-action-btn" onclick="closeHelpDrawer();toggleChat()">💬 Отвори AI Чат за въпроси</button>
@@ -674,11 +698,15 @@ function updateHelpContent(tabId){
       <div class="help-section-title">⌨️ Бързи клавиши &amp; жестове</div>
       <div class="help-shortcuts">
         <div class="help-shortcut"><span>Команден панел</span><kbd>⌘K / Ctrl+K</kbd></div>
-        <div class="help-shortcut"><span>Затвори overlay/modal</span><kbd>Esc</kbd></div>
+        <div class="help-shortcut"><span>В ⌘K — навигация между резултати</span><kbd>↑ / ↓</kbd></div>
+        <div class="help-shortcut"><span>В ⌘K — изпълни избраното</span><kbd>Enter</kbd></div>
+        <div class="help-shortcut"><span>Затвори overlay / изчисти multi-select</span><kbd>Esc</kbd></div>
         <div class="help-shortcut"><span>Глобално търсене</span><kbd>"Търси" в navbar</kbd></div>
         <div class="help-shortcut"><span>Hover ad → детайли</span><kbd>0.4с задържане</kbd></div>
         <div class="help-shortcut"><span>Click на ден в календар</span><kbd>Popover</kbd></div>
         <div class="help-shortcut"><span>AI чат (плаващ "AI")</span><kbd>Долен десен ъгъл</kbd></div>
+        <div class="help-shortcut"><span>Strategy Kanban drawer</span><kbd>♟ в navbar</kbd></div>
+        <div class="help-shortcut"><span>Тема превключване</span><kbd>☀/🌙 в navbar</kbd></div>
       </div>
     </div>`;
 }
@@ -1416,6 +1444,360 @@ const COURSE_LESSONS=[
       options:['1','2','4 (HTML, MD, PDF, CSV)','10'],
       correct:2,
       explanation:'HTML, Markdown, Print/PDF, и Top Creatives CSV. Плюс JSON в Privacy panel за пълни данни.'
+    }
+  },
+  {
+    id:'power-workflow',
+    icon:'⚡',
+    title:'Power Workflow — Команден панел и Multi-select',
+    duration:'7 мин',
+    difficulty:'Среден',
+    objectives:[
+      'Как да използваш ⌘K Command Palette за бързи действия',
+      'Как работи Multi-select и Bulk Actions',
+      'Sort dropdowns в Dashboard и Copy Library',
+      'Density toggle в Copy Library'
+    ],
+    content:`
+      <h3>⌘K / Ctrl+K — Команден Панел</h3>
+      <p>Натисни <strong>⌘K</strong> (Mac) или <strong>Ctrl+K</strong> (Windows/Linux) от всяко място в приложението за да отвориш Command Palette. Можеш и да кликнеш бутона <kbd>⌘K</kbd> в navbar-а.</p>
+      <ul>
+        <li><strong>Fuzzy search:</strong> Пиши каквото търсиш — tabove, брандове, действия, скорошни елементи. Резултатите се филтрират в реално время.</li>
+        <li><strong>↑ / ↓</strong> — навигация между резултатите без мишка</li>
+        <li><strong>Enter</strong> — изпълни избраното действие</li>
+        <li><strong>Esc</strong> — затвори панела</li>
+        <li><strong>Recent items:</strong> Последно посетените раздели и брандове се показват автоматично при отваряне (без да пишеш)</li>
+        <li><strong>Специални команди:</strong> Напиши "курс", "тема", "onboarding", "playbook" и т.н. за директен достъп до функции</li>
+      </ul>
+
+      <div class="course-tip">
+        💡 <strong>Трик:</strong> ⌘K → "Покажи onboarding" рестартира Onboarding Wizard за да преминеш отново настройките.
+      </div>
+
+      <h3>Multi-select + Bulk Actions</h3>
+      <p>Работи еднакво в Dashboard и Copy Library:</p>
+      <ol>
+        <li>Кликни <strong>□ чекбокса</strong> горе-вляво на рекламна карта за да я маркираш</li>
+        <li>Маркирай 2 или повече реклами — появява се <strong>плаваща лента отдолу</strong></li>
+        <li>Изпълни bulk действие:</li>
+      </ol>
+      <ul>
+        <li><strong>⭐ Към Swipe</strong> — запазва всички избрани в Swipe File наведнъж</li>
+        <li><strong>⇄ Сравни</strong> — отваря side-by-side изглед (макс 4 реклами)</li>
+        <li><strong>⬇ Експорт CSV</strong> — сваля CSV файл само с избраните реклами</li>
+        <li><strong>📋 Копирай текст</strong> — копира copy text-а на всички избрани в clipboard</li>
+        <li><kbd>Esc</kbd> — изчиства целия избор</li>
+      </ul>
+
+      <h3>Sort Dropdowns</h3>
+      <p>И Dashboard, и Copy Library имат Sort dropdown с 7 опции:</p>
+      <ul>
+        <li><strong>Най-нови</strong> — по начална дата (descending)</li>
+        <li><strong>Най-дълго активни</strong> — по дни живот (descending) — намираш winners</li>
+        <li><strong>WPS ↓</strong> — Winner Probability Score (премиум отгоре)</li>
+        <li><strong>ALV ↓</strong> — Ad Value Score (най-ценни отгоре)</li>
+        <li><strong>Брой варианти</strong> — най-тествани отгоре</li>
+        <li><strong>Бранд (А→Я)</strong> — азбучно по бранд</li>
+        <li><strong>Брой реклами</strong> (само Dashboard) — по-голям share of voice отгоре</li>
+      </ul>
+      <p>Изборът се запазва в localStorage — следващата сесия започва с последния ти sort.</p>
+
+      <h3>Density Toggle (Copy Library)</h3>
+      <p>3-бутонният превключвател до sort dropdown в Copy Library:</p>
+      <ul>
+        <li><strong>Compact</strong> — максимален брой карти на екрана, минимален текст. За бърз overview.</li>
+        <li><strong>Standard</strong> — балансиран изглед с пълен scoring. Препоръчителен за анализ.</li>
+        <li><strong>Gallery</strong> — голям visual preview. За когато визуалният creative е важен.</li>
+      </ul>
+    `,
+    quiz:{
+      q:'Кой клавишен комбинация отваря Command Palette?',
+      options:['Ctrl+P','⌘K / Ctrl+K','Alt+Space','Ctrl+Shift+F'],
+      correct:1,
+      explanation:'⌘K (Mac) или Ctrl+K (Windows/Linux) отваря Command Palette от всяко място в приложението. Може и да се кликне бутонът ⌘K в navbar-а.'
+    }
+  },
+  {
+    id:'advanced-filters',
+    icon:'🔍',
+    title:'Разширени филтри и Saved Presets',
+    duration:'8 мин',
+    difficulty:'Среден',
+    objectives:[
+      'Как работи Advanced Filter Panel и кои параметри включва',
+      'Как да запазиш и приложиш Saved Filter Preset',
+      'Tags + Boards в Swipe File за организация'
+    ],
+    content:`
+      <h3>Advanced Filter Panel</h3>
+      <p>Кликни <strong>"⚙ Филтри"</strong> (или "Разширени филтри") в Dashboard или Copy Library за да разгънеш панела. Всички филтри се прилагат мигновено.</p>
+
+      <h4>Налични параметри:</h4>
+      <ul>
+        <li><strong>Days Active (range slider):</strong> Задай минимален и максимален брой дни активна реклама. Пример: 14–60 дни = само доказани реклами, не прекалено стари.</li>
+        <li><strong>WPS Tier (multi-checkbox):</strong> Избери кои tier-ове да виждаш — Premium 🟢, Watch 🟡, Ignore ⚫. Можеш да комбинираш.</li>
+        <li><strong>Само с оферта (toggle):</strong> Показва само реклами с детектирана оферта (%, бонус, free spin и т.н.).</li>
+        <li><strong>Платформа (multi-select):</strong> Филтрирай по Facebook, Instagram, Messenger или комбинация.</li>
+        <li><strong>Persona (multi-select):</strong> Виж само реклами от определен тип актьор (Aggressive Spender, Affiliate Network и т.н.).</li>
+        <li><strong>Нови от последно посещение (toggle):</strong> Показва само реклами стартирали след твоя последен scan — идеално за "какво е ново днес".</li>
+      </ul>
+
+      <div class="course-tip">
+        💡 <strong>Комбо:</strong> WPS Premium + Само с оферта + 14+ дни = списък от проверени winning оферти. Идеален за copywriting inspiration.
+      </div>
+
+      <h3>Saved Filter Presets</h3>
+      <p>Лилавите chips под Advanced Filters. Целта: запази сложни комбинации веднъж, прилагай с 1 клик завинаги.</p>
+      <ol>
+        <li>Настрой филтрите и сортирането до желаното</li>
+        <li>Кликни <strong>"💾 Запази preset"</strong></li>
+        <li>Въведи име (например "Premium Winners с оферта")</li>
+        <li>Chip-ът се появява в лилавия ред</li>
+        <li>При следваща сесия — 1 клик върху chip прилага всички настройки наведнъж</li>
+      </ol>
+      <p><strong>Preset запазва:</strong> всички активни филтри + избрания sort order + density mode.</p>
+      <p><strong>× на chip</strong> — изтрива preset-а (необратимо).</p>
+
+      <h3>Tags + Boards в Swipe File</h3>
+      <p>След като запазиш реклами в Swipe File (☆), можеш да ги организираш:</p>
+      <ul>
+        <li><strong>Boards (папки):</strong> Създай boards за различни теми — "UCL кампания", "Welcome бонус идеи", "Q4 реклами". Превключвай между boards с таба горе.</li>
+        <li><strong>Tags (свободни):</strong> Добавяй произволни тагове на всеки saved item — "strong-hook", "200-bonus", "seasonal" и т.н. Може да търсиш по таг.</li>
+        <li><strong>Edit модал:</strong> Hover върху saved item → появява се ✏ иконка → кликни за да редактираш board, тагове и бележки.</li>
+      </ul>
+
+      <div class="course-action">
+        🎯 <strong>Опитай сега:</strong> Отвори Copy Library → настрой WPS Premium + поне 14 дни → кликни "💾 Запази" → дай му название. Сега имаш постоянен preset.
+      </div>
+    `,
+    quiz:{
+      q:'Какво включва един "Saved Preset"?',
+      options:[
+        'Само избраните брандове',
+        'Само сортирането',
+        'Комбинацията от всички активни филтри + sort order + density mode',
+        'Само WPS tier настройките'
+      ],
+      correct:2,
+      explanation:'Saved Preset запазва пълната комбинация: всички активни филтри (days range, WPS tier, оферта, платформа, persona) + избрания sort order + density mode. Едно кликване ги прилага всичките наведнъж.'
+    }
+  },
+  {
+    id:'visual-analytics',
+    icon:'📊',
+    title:'Визуална Аналитика — Heatmap, A/B Inspector, Network Graph',
+    duration:'10 мин',
+    difficulty:'Напреднал',
+    objectives:[
+      'Activity Heatmap — Launch dates vs Scan history режими и диапазони',
+      'A/B Variant Inspector — как да четеш клъстери и diff highlighting',
+      'Shadow Network Graph — force-directed граф на страничните връзки',
+      'iGaming Benchmarks — агрегирани индустриални метрики'
+    ],
+    content:`
+      <h3>🔥 Activity Heatmap (Trends таб)</h3>
+      <p>GitHub-style calendar grid с цветови интензитет по ден. Намираш я в <strong>Trends</strong> таба.</p>
+
+      <h4>Диапазони:</h4>
+      <ul>
+        <li><strong>4 седмици</strong> — последния месец. Добро за тактически преглед.</li>
+        <li><strong>12 седмици</strong> (по подразбиране) — 3 месеца. Балансиран изглед.</li>
+        <li><strong>26 седмици</strong> — половин година. Виждаш сезонни patterns.</li>
+        <li><strong>52 седмици</strong> — цяла година. Разкрива годишни цикли и peak периоди.</li>
+      </ul>
+
+      <h4>Два режима:</h4>
+      <ul>
+        <li><strong>📅 Launch dates</strong> — всяка клетка показва колко реклами са <em>стартирали</em> на тази дата (базира се на <code>ad_delivery_start_time</code>). Отговаря на: "Кога конкурентите пускат нови реклами?"</li>
+        <li><strong>🔍 Scan history</strong> — всяка клетка показва колко реклами платформата е <em>открила/видяла</em> на тази дата (базира се на дата на скан). Отговаря на: "Кога аз съм правил scans и колко реклами е имало тогава?"</li>
+      </ul>
+
+      <div class="course-tip">
+        💡 <strong>Кой режим да ползваш:</strong> Launch dates = за да видиш competitor burst patterns. Scan history = за да оцениш собствения си monitoring coverage.
+      </div>
+
+      <h3>🧪 A/B Variant Inspector</h3>
+      <p>Бутонът <strong>"🧪 A/B Inspector"</strong> в Dashboard (или от ⌘K) отваря модал с всички детектирани A/B тест клъстери.</p>
+      <ul>
+        <li><strong>Клъстер:</strong> Група от реклами от същата страница с почти идентичен copy (>80% сходство) — вероятен A/B тест.</li>
+        <li><strong>Side-by-side изглед:</strong> Два варианта едновременно — виждаш разликите визуално.</li>
+        <li><strong>Word-level diff highlighting:</strong> Добавените думи са маркирани в зелено, премахнатите в червено. Виждаш точно какво се тества — CTA, оферта, емоционален тон.</li>
+        <li><strong>Брой варианти:</strong> Колкото повече варианти има клъстер, толкова повече бюджет влага конкурентът в теста.</li>
+      </ul>
+      <p><strong>Use case:</strong> Виждаш Betano тества "200% бонус" vs "€200 бонус" — знаеш какъв е тяхният message test.</p>
+
+      <h3>🕸 Shadow Network Graph</h3>
+      <p>Появява се автоматично когато има shadow реклами. Бутонът е в brand filter row-а.</p>
+      <ul>
+        <li><strong>Force-directed SVG граф</strong> — нодовете са Facebook страниците, линиите показват типа на връзката.</li>
+        <li><strong>Типове връзки:</strong> общи домейни, идентични hook фрази, споделени оферти, alias история.</li>
+        <li><strong>Интерактивен:</strong> Drag нодове за да пренаредиш, hover за детайли, кликни за Page Transparency.</li>
+        <li><strong>Цветове:</strong> Официални брандове = amber, shadow pages = red/orange по PLS tier.</li>
+      </ul>
+
+      <h3>📊 iGaming Benchmarks Panel</h3>
+      <p>В Dashboard-а, след Brand Cards. Агрегира данни от текущия скан + цялата история.</p>
+      <ul>
+        <li><strong>Avg longevity:</strong> Средни дни активна реклама в Bulgarian iGaming пазара.</li>
+        <li><strong>Winner rate:</strong> Какъв % от рекламите стават winners (≥30 дни).</li>
+        <li><strong>Peak day:</strong> Кой ден от седмицата има най-много нови стартирания.</li>
+        <li><strong>WPS дистрибуция:</strong> Разпределение Premium/Watch/Ignore за пазара.</li>
+        <li><strong>Best offers:</strong> Топ оферти по честота (колко бранда ги ползват).</li>
+      </ul>
+      <p><em>Точността расте с повече история — препоръчваме 5+ запазени скана за представителни данни.</em></p>
+    `,
+    quiz:{
+      q:'Каква е разликата между "Launch dates" и "Scan history" режим в Heatmap?',
+      options:[
+        'Няма разлика — показват едно и също',
+        'Launch dates = кога рекламите са стартирали (start_time); Scan history = кога платформата е открила рекламите при scan',
+        'Launch dates = само за Facebook; Scan history = за всички платформи',
+        'Launch dates = последните 4 седмици; Scan history = последните 52 седмици'
+      ],
+      correct:1,
+      explanation:'Launch dates използва ad_delivery_start_time — кога рекламата реално е стартирала. Scan history използва датата на скан — кога ТИ си видял рекламата. Различни въпроси изискват различен режим.'
+    }
+  },
+  {
+    id:'reports-sharing',
+    icon:'📤',
+    title:'Отчети и споделяне',
+    duration:'6 мин',
+    difficulty:'Среден',
+    objectives:[
+      'Как да генерираш и споделяш пълен HTML/PDF отчет',
+      'Как работи Competitor Playbook (Claude AI генериран)',
+      'Telegram Alerts — setup и auto-push',
+      'CSV bulk export от Multi-select'
+    ],
+    content:`
+      <h3>📊 Full Report Export</h3>
+      <p>Бутонът <strong>"📊 Пълен отчет"</strong> в Dashboard-а генерира standalone принтируем HTML документ.</p>
+      <ul>
+        <li><strong>Съдържание:</strong> Всички брандове, реклами с пълен scoring, iGaming Benchmarks, топ оферти, A/B клъстери, Shadow Network summary.</li>
+        <li><strong>Принтирай → PDF:</strong> Кликни 🖨 в модала → браузърният print диалог → "Save as PDF".</li>
+        <li><strong>Свали HTML:</strong> Бутонът "⬇ Свали HTML" запазва standalone файл — изпрати на колеги без да им трябва достъп до приложението.</li>
+        <li><strong>Формат:</strong> Чист print-friendly layout, без темата на приложението. Работи и при тъмна тема.</li>
+      </ul>
+
+      <div class="course-tip">
+        💡 <strong>Use case:</strong> Генерирай отчет всеки понеделник → изпрати на маркетинг екипа → те виждат competitor landscape без достъп до приложението.
+      </div>
+
+      <h3>📘 Competitor Playbook (per-brand)</h3>
+      <p>Лилавият бутон <strong>"📘 Playbook"</strong> в header-а на всяка brand card.</p>
+      <ul>
+        <li><strong>Генерира се от:</strong> Claude AI (Anthropic) — нужен е Claude API key в Settings.</li>
+        <li><strong>Съдържание:</strong> Стратегически анализ за конкретен конкурент: top hooks analysis, offer strategy, detected weaknesses, counter-steps, messaging recommendations.</li>
+        <li><strong>Принтируем:</strong> 🖨 бутон в модала → PDF. Изпрати на CMO или стратегически екип.</li>
+        <li><strong>Персонализиран:</strong> Всеки playbook е базиран на реалните реклами от текущия скан — не е шаблонен.</li>
+      </ul>
+
+      <h3>📱 Telegram Alerts</h3>
+      <p>Настройка: <strong>Settings → Telegram Bot Token + Chat ID</strong></p>
+      <ol>
+        <li>Създай Telegram Bot чрез <strong>@BotFather</strong> → получи Bot Token</li>
+        <li>Намери Chat ID чрез <strong>@userinfobot</strong> или от URL на web.telegram.org</li>
+        <li>Въведи двете стойности в Settings → натисни "🧪 Тест" за проверка</li>
+      </ol>
+      <p><strong>Кога се изпращат съобщения:</strong></p>
+      <ul>
+        <li>При тригнато Alert правило — веднага с бранд, метрика и стойност</li>
+        <li>След всеки Auto-scan — кратко summary с нови реклами по бранд</li>
+      </ul>
+
+      <h3>CSV Bulk Export</h3>
+      <p>Два начина:</p>
+      <ul>
+        <li><strong>Multi-select → ⬇ Експорт CSV</strong> — само избраните реклами</li>
+        <li><strong>📄 Свали отчет ▾ → ⭐ Top Creatives CSV</strong> — само ALV ≥ 8.0 реклами от целия скан</li>
+      </ul>
+      <p>CSV файлът съдържа: copy text, hook, offer, дати, дни активна, WPS, ALV, бранд, страница, платформи.</p>
+
+      <div class="course-action">
+        🎯 <strong>Опитай:</strong> Направи scan → кликни "📘 Playbook" на най-активния конкурент → прочети препоръките → кликни "📊 Пълен отчет" → принтирай като PDF.
+      </div>
+    `,
+    quiz:{
+      q:'Кой модел генерира Competitor Playbook?',
+      options:['GPT-4','Gemini Pro','Claude AI (Anthropic)','Llama 3'],
+      correct:2,
+      explanation:'Competitor Playbook се генерира от Claude AI (Anthropic) — нужен е Claude API key в Settings. Моделът анализира реалните реклами от скана и генерира персонализиран стратегически документ.'
+    }
+  },
+  {
+    id:'automation-customization',
+    icon:'⚙',
+    title:'Автоматизация и персонализация',
+    duration:'5 мин',
+    difficulty:'Начинаещ',
+    objectives:[
+      'Auto-scan — как да настроиш интервал за фоново мониториране',
+      'Football-Data.org интеграция за точни спортни часове',
+      'Theme toggle, Remove competitor chips, Strategy Drawer',
+      'Onboarding Wizard — повторно стартиране'
+    ],
+    content:`
+      <h3>⏰ Auto-scan</h3>
+      <p>Вместо да отваряш приложението всеки ден, нека то сканира автоматично.</p>
+      <p><strong>Настройка:</strong> Settings → Автоматичен скан:</p>
+      <ol>
+        <li>Постави отметка на <strong>"Активен"</strong></li>
+        <li>Избери интервал: <strong>6ч / 12ч / 24ч / 48ч</strong></li>
+        <li>Платформата автоматично извиква <code>run()</code> на зададения интервал</li>
+      </ol>
+      <p><strong>Комбинирай с Telegram:</strong> Auto-scan + Telegram Alerts = пасивен мониторинг — получаваш известие в Telegram само когато нещо се случи.</p>
+      <p><em>Забележка: Auto-scan изисква приложението да е отворено в браузъра (tab активен или в background).</em></p>
+
+      <h3>⚽ Football-Data.org интеграция</h3>
+      <p>Опционален API ключ за по-точни часове на футболни срещи в Календара.</p>
+      <ul>
+        <li><strong>Настройка:</strong> Settings → Football-Data.org API Key (безплатен ключ от football-data.org/client)</li>
+        <li><strong>Какво добавя:</strong> Когато "🔄 Обнови от Sports API" е кликнат, данните от TheSportsDB се обогатяват с точни kickoff часове от Football-Data.org в <strong>БГ часова зона</strong></li>
+        <li><strong>Без ключ:</strong> Работи само с TheSportsDB (приблизителни часове). Ключът е опционален.</li>
+      </ul>
+
+      <h3>🌓 Theme Toggle</h3>
+      <p>Бутонът ☀ / 🌙 в navbar-а превключва между Светла и Тъмна тема.</p>
+      <ul>
+        <li><strong>Auto-detect:</strong> При първо зареждане платформата следва системната ти OS тема (prefers-color-scheme)</li>
+        <li><strong>Persistence:</strong> Изборът се запазва в localStorage — следващата сесия започва с твоята предпочитана тема</li>
+      </ul>
+
+      <h3>× Remove Competitor Chips</h3>
+      <p>Chip-овете в sidebar-а (Inbet, Efbet и т.н.) имат <strong>× бутон</strong> при hover.</p>
+      <ul>
+        <li>Кликни × за да премахнеш бранда <strong>перманентно</strong> от списъка</li>
+        <li>Следващите сканове не включват изтрития бранд</li>
+        <li>Можеш да го добавиш отново с input полето "Добави бранд..."</li>
+      </ul>
+
+      <h3>♟ Strategy Drawer</h3>
+      <p>Kanban board-ът вече се отваря като <strong>страничен drawer</strong> (не таб).</p>
+      <ul>
+        <li>Кликни <strong>♟</strong> бутона в navbar-а за да отвориш</li>
+        <li>Drawer-ът се плъзга от дясно — можеш да работиш с него докато Dashboard е видим</li>
+        <li><kbd>Esc</kbd> или кликни извън drawer-а за да затвориш</li>
+      </ul>
+
+      <h3>👋 Onboarding Wizard — повторно стартиране</h3>
+      <p>Onboarding-ът се показва автоматично при първо посещение. За да го видиш отново:</p>
+      <ul>
+        <li><strong>⌘K → "Покажи onboarding"</strong></li>
+        <li>Или: Help Drawer → "👋 Onboarding Wizard" бутон</li>
+      </ul>
+      <p>Удобно за: нов член на екипа, повторно конфигуриране на токени, добавяне на нови брандове.</p>
+    `,
+    quiz:{
+      q:'Какво прави Auto-scan функцията?',
+      options:[
+        'Сканира само нощем',
+        'Автоматично извиква анализ на зададен интервал (6ч/12ч/24ч/48ч) докато приложението е отворено',
+        'Изпраща сканирани данни в облака',
+        'Само изпраща Telegram съобщения'
+      ],
+      correct:1,
+      explanation:'Auto-scan автоматично извиква run() функцията на зададения интервал (6/12/24/48 часа). Изисква приложението да е отворено в браузъра. Комбинирай с Telegram за да получаваш известия без активно следене.'
     }
   }
 ];
