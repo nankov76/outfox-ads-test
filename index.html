@@ -37,14 +37,14 @@ const HELP_CONTENT={
     sections:[
       {
         title:'Принцип на работа',
-        body:'При натискане на <strong>Анализирай</strong>: <br>1️⃣ За всеки избран бранд се прави API call към <code>graph.facebook.com/v21.0/ads_archive</code> с твоя FB token и permission <code>ads_read</code>.<br>2️⃣ Резултатите се обогатяват — извличане на тип реклама, hooks, оферти, A/B варианти.<br>3️⃣ Изчисляват се 3 scoring оси (WPS, ALV, PLS) — виж Legend.<br>4️⃣ Shadow Tracker засича несвързани страници използващи същите creative hooks.<br>5️⃣ Резултатите се рендират в карти + Timeline + Brand Battle + AI Summary.'
+        body:'При натискане на <strong>Анализирай</strong>: <br>1️⃣ За всеки избран бранд се прави API call към <code>graph.facebook.com/v21.0/ads_archive</code> с твоя FB token и permission <code>ads_read</code>.<br>2️⃣ Резултатите се обогатяват — извличане на тип реклама, hooks, оферти, A/B варианти.<br>3️⃣ Изчисляват се 3 scoring оси (WPS, ALV, PLS) — виж Legend.<br>4️⃣ Shadow Tracker засича несвързани страници използващи същите creative hooks.<br>5️⃣ Резултатите се рендират в карти + Timeline + Ad Presence by Brand + AI Summary.'
       },
       {
         title:'Какво виждаш',
         items:[
           '<strong>5 Metric Cards:</strong> общо реклами, активни брандове, най-дълъг winner, мин. бюджет, нови за 7 дни',
           '<strong>Timeline (30 скана):</strong> история по дни, всеки бранд = отделна линия',
-          '<strong>Brand Battle:</strong> хоризонтални барове сравнение SoV (Share of Voice). Зеленото ↑ = ръст vs предишен скан',
+          '<strong>Ad Presence by Brand:</strong> хоризонтални барове сравнение SoV (Share of Voice). Зеленото ↑ = ръст vs предишен скан',
           '<strong>AI Summary:</strong> Claude генерира top 4 инсайта — кой пуска най-много, кой намалява, доминиращ тип, препоръка',
           '<strong>Brand Cards:</strong> per-brand reklami с пълен scoring profile (WPS, ALV, варианти, persona)',
           '<strong>🕸 Shadow Network Graph:</strong> интерактивен SVG граф на връзките между официалните и shadow страниците (общи домейни, оферти, hooks, alias). Бутонът се появява в брандовия филтър ред когато има поне 1 shadow реклама.',
@@ -55,7 +55,7 @@ const HELP_CONTENT={
         title:'Бутони действия',
         items:[
           '<strong>✨ AI Анализ:</strong> Пълен Claude Opus 4.7 doклад с препоръки',
-          '<strong>📘 Playbook (per-brand):</strong> Един клик в header-а на бранд карта генерира стратегически playbook за този конкурент — top hooks анализ, оферти стратегия, слабости, контра-стъпки. Печатaем като PDF (🖨 в модала).',
+          '<strong>📘 Playbook (per-brand):</strong> Един клик в header-а на бранд карта генерира стратегически playbook за този конкурент — top hooks анализ, оферти стратегия, слабости, контра-стъпки. Печатаем като PDF (🖨 в модала).',
           '<strong>📊 Пълен отчет:</strong> Генерира принтируем HTML отчет с всички брандове, реклами, benchmarks и оферти. Може да се принтира като PDF или да се свали като standalone HTML файл.',
           '<strong>🧪 A/B Variant Inspector:</strong> Показва всички детектирани A/B клъстери от текущия скан — страничен изглед с два варианта едновременно и word-level diff highlighting за да видиш точно какво се тества.',
           '<strong>🔍 Търси shadow:</strong> Стартира Shadow Discovery — намира скрити страници с подобни hooks',
@@ -74,11 +74,22 @@ const HELP_CONTENT={
           '<strong>Saved Filter Presets:</strong> Лилавите chips под Advanced Filters. Натисни "💾 Запази" за да запазиш комбинацията от текущите филтри + сортиране под собствено име. При следваща сесия — 1 клик върху chip за да приложиш всички настройки наведнъж.',
           '<strong>× Remove конкурент:</strong> Chip-овете в sidebar-а имат × бутон при hover. Кликни за да премахнеш бранда от списъка с конкуренти (необратимо — може да се добави отново).'
         ]
+      },
+      {
+        title:'Метрики обяснени',
+        items:[
+          '<strong>Активни реклами:</strong> Брой реклами в Meta Ad Library с status=ACTIVE към момента на скана за избраните брандове. Сума от <code>count</code> полето за всеки бранд.',
+          '<strong>Брандове с реклами:</strong> Колко от избраните брандове върнаха поне една активна реклама. Филтър <code>count > 0</code> върху избраните.',
+          '<strong>Winner (дни активна):</strong> Най-дълго работещата реклама в текущия скан — индикатор за winning creative. <code>max(daysActive)</code> сред всички. Дълга активност означава, че бранда я счита за работеща.',
+          '<strong>Мин. бюджет (€/мес):</strong> Минималният месечен бюджет, оценен от Meta-публикувания spend range (долна граница). ⚠ Това е МИНИМУМ. Реалният бюджет често е 2-5x повече.',
+          '<strong>Нови (7 дни):</strong> Реклами стартирали през последните 7 дни — сигнал за нова кампания или тест. Филтър <code>ad_creation_date >= днес−7дни</code>.',
+          '<strong>Оценена цена (€):</strong> Прогнозна обща инвестиция в показаните реклами (от старт до сега). <code>Σ (impressions_midpoint × CPM/1000)</code> с CPM = €2.25 за БГ iGaming. ⚠ Оценка с широка грешка (±40%).'
+        ]
       }
     ]
   },
   'copy-lib':{
-    label:'Copy Library',
+    label:'Креативи',
     desc:'Всички competitor реклами на едно място — филтрирани, сортирани, с пълен scoring. Идеално за inspiration и messaging анализ.',
     sections:[
       {
@@ -262,13 +273,13 @@ const TOUR_STEPS=[
   {
     targetId:'navtab-dashboard',
     title:'Dashboard — Командният Център',
-    desc:'Timeline на конкурентната активност, Brand Battle (кой доминира), AI Summary с автоматични препоръки и всички реклами по бранд.',
+    desc:'Timeline на конкурентната активност, Ad Presence by Brand (кой доминира), AI Summary с автоматични препоръки и всички реклами по бранд.',
     placement:'bottom',
     onClick:()=>switchTab('dashboard')
   },
   {
     targetId:'navtab-copy-lib',
-    title:'Copy Library',
+    title:'Креативи',
     desc:'Всички competitor реклами на едно място. Филтрирай, търси, запазвай силни реклами в Swipe File и използвай Focus за да виждаш само най-важното.',
     placement:'bottom',
     onClick:()=>switchTab('copy-lib')
@@ -857,7 +868,7 @@ const COURSE_LESSONS=[
         <li>Как да настроиш токени и стартираш първи анализ</li>
         <li>Как да четеш scoring индикаторите (WPS, ALV, PLS)</li>
         <li>Как да използваш Shadow Tracker и Personas</li>
-        <li>Как да работиш с Dashboard, Copy Library, Calendar</li>
+        <li>Как да работиш с Dashboard, Креативи, Calendar</li>
         <li>Как да създаваш Alerts и стратегически планове</li>
       </ol>
 
@@ -939,7 +950,7 @@ const COURSE_LESSONS=[
         <li><strong>API calls:</strong> За всеки бранд — 1 заявка към <code>graph.facebook.com/v21.0/ads_archive</code> с параметри (брой реклами, държава, статус)</li>
         <li><strong>Shadow Discovery:</strong> Допълнителни заявки за намиране на свързани shadow страници</li>
         <li><strong>Analyze:</strong> Класификация на тип реклама, извличане на hooks/offers, изчисление на 3-те scoring оси</li>
-        <li><strong>Render:</strong> Метрики, Timeline, Brand Battle, brand cards</li>
+        <li><strong>Render:</strong> Метрики, Timeline, Ad Presence by Brand, brand cards</li>
         <li><strong>Auto-save:</strong> Сканът се запазва в History автоматично</li>
       </ol>
 
@@ -1175,7 +1186,7 @@ const COURSE_LESSONS=[
     difficulty:'Средно',
     objectives:[
       'Как да четеш Timeline графиката',
-      'Какво показва Brand Battle',
+      'Какво показва Ad Presence by Brand',
       'Как да интерпретираш AI Summary',
       'Метрики card-ове'
     ],
@@ -1206,7 +1217,7 @@ const COURSE_LESSONS=[
       </ul>
       <p><em>Нужни са поне 2 запазени скана за да се появи timeline.</em></p>
 
-      <h3>Brand Battle (хоризонтален bar chart)</h3>
+      <h3>Ad Presence by Brand (хоризонтален bar chart)</h3>
       <ul>
         <li>Брой реклами на бранд</li>
         <li>Цветен бар = SoV (Share of Voice)</li>
@@ -1239,7 +1250,7 @@ const COURSE_LESSONS=[
       </ul>
     `,
     quiz:{
-      q:'В Brand Battle виждаш Betano с +12 ↑ зелено. Какво означава?',
+      q:'В Ad Presence by Brand виждаш Betano с +12 ↑ зелено. Какво означава?',
       options:[
         'Betano има 12 реклами общо',
         'Betano е спрял 12 реклами',
@@ -1253,17 +1264,17 @@ const COURSE_LESSONS=[
   {
     id:'copy-library-ai',
     icon:'💡',
-    title:'Copy Library, AI Чат и Heatmap',
+    title:'Креативи, AI Чат и Heatmap',
     duration:'6 мин',
     difficulty:'Средно',
     objectives:[
-      'Как да филтрираш и сортираш в Copy Library',
+      'Как да филтрираш и сортираш в Креативи',
       'Как да използваш Heatmap за trending фрази',
       'Кога да използваш AI Чат',
       'Swipe File за inspiration'
     ],
     content:`
-      <h3>Copy Library — какво и кога</h3>
+      <h3>Креативи — какво и кога</h3>
       <p>Когато искаш да видиш ВСИЧКИ реклами от ВСИЧКИ брандове на едно място, без brand cards. Идеално за:</p>
       <ul>
         <li>Copywriting inspiration</li>
@@ -1435,7 +1446,7 @@ const COURSE_LESSONS=[
       <p>Бутон <strong>"Търси"</strong> в navbar → отваря overlay със live search над:</p>
       <ul>
         <li>Текущ scan (всички ad copies)</li>
-        <li>Copy Library</li>
+        <li>Креативи</li>
         <li>Swipe файл</li>
       </ul>
       <p>Click на резултат → отива на правилния таб.</p>
@@ -1456,8 +1467,8 @@ const COURSE_LESSONS=[
     objectives:[
       'Как да използваш ⌘K Command Palette за бързи действия',
       'Как работи Multi-select и Bulk Actions',
-      'Sort dropdowns в Dashboard и Copy Library',
-      'Density toggle в Copy Library'
+      'Sort dropdowns в Dashboard и Креативи',
+      'Density toggle в Креативи'
     ],
     content:`
       <h3>⌘K / Ctrl+K — Команден Панел</h3>
@@ -1476,7 +1487,7 @@ const COURSE_LESSONS=[
       </div>
 
       <h3>Multi-select + Bulk Actions</h3>
-      <p>Работи еднакво в Dashboard и Copy Library:</p>
+      <p>Работи еднакво в Dashboard и Креативи:</p>
       <ol>
         <li>Кликни <strong>□ чекбокса</strong> горе-вляво на рекламна карта за да я маркираш</li>
         <li>Маркирай 2 или повече реклами — появява се <strong>плаваща лента отдолу</strong></li>
@@ -1491,7 +1502,7 @@ const COURSE_LESSONS=[
       </ul>
 
       <h3>Sort Dropdowns</h3>
-      <p>И Dashboard, и Copy Library имат Sort dropdown с 7 опции:</p>
+      <p>И Dashboard, и Креативи имат Sort dropdown с 7 опции:</p>
       <ul>
         <li><strong>Най-нови</strong> — по начална дата (descending)</li>
         <li><strong>Най-дълго активни</strong> — по дни живот (descending) — намираш winners</li>
@@ -1503,8 +1514,8 @@ const COURSE_LESSONS=[
       </ul>
       <p>Изборът се запазва в localStorage — следващата сесия започва с последния ти sort.</p>
 
-      <h3>Density Toggle (Copy Library)</h3>
-      <p>3-бутонният превключвател до sort dropdown в Copy Library:</p>
+      <h3>Density Toggle (Креативи)</h3>
+      <p>3-бутонният превключвател до sort dropdown в Креативи:</p>
       <ul>
         <li><strong>Compact</strong> — максимален брой карти на екрана, минимален текст. За бърз overview.</li>
         <li><strong>Standard</strong> — балансиран изглед с пълен scoring. Препоръчителен за анализ.</li>
@@ -1531,7 +1542,7 @@ const COURSE_LESSONS=[
     ],
     content:`
       <h3>Advanced Filter Panel</h3>
-      <p>Кликни <strong>"⚙ Филтри"</strong> (или "Разширени филтри") в Dashboard или Copy Library за да разгънеш панела. Всички филтри се прилагат мигновено.</p>
+      <p>Кликни <strong>"⚙ Филтри"</strong> (или "Разширени филтри") в Dashboard или Креативи за да разгънеш панела. Всички филтри се прилагат мигновено.</p>
 
       <h4>Налични параметри:</h4>
       <ul>
@@ -1568,7 +1579,7 @@ const COURSE_LESSONS=[
       </ul>
 
       <div class="course-action">
-        🎯 <strong>Опитай сега:</strong> Отвори Copy Library → настрой WPS Premium + поне 14 дни → кликни "💾 Запази" → дай му название. Сега имаш постоянен preset.
+        🎯 <strong>Опитай сега:</strong> Отвори Креативи → настрой WPS Premium + поне 14 дни → кликни "💾 Запази" → дай му название. Сега имаш постоянен preset.
       </div>
     `,
     quiz:{
@@ -2144,6 +2155,9 @@ input:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--am
 .btn-sm{background:none;border:1px solid var(--border2);color:var(--muted);border-radius:var(--radius-sm);padding:6px 12px;cursor:pointer;font-size:13px;transition:var(--transition);font-family:var(--font)}
 .btn-sm:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
 
+.btn-tiny{background:none;border:1px solid var(--border2);color:var(--muted);border-radius:var(--radius-sm);padding:2px 8px;cursor:pointer;font-size:11px;transition:var(--transition);font-family:var(--font)}
+.btn-tiny:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+
 .collapsible-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;text-align:left;padding:0;display:flex;align-items:center;gap:6px;width:100%;transition:var(--transition)}
 .collapsible-toggle:hover{color:var(--text)}
 .collapsible-body{display:none;flex-direction:column;gap:7px;margin-top:4px}
@@ -2156,11 +2170,20 @@ input:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--am
 .btn-run.loading::after{content:'';position:absolute;bottom:0;left:0;height:2px;background:rgba(0,0,0,0.3);animation:prog 1.5s ease-in-out infinite}
 @keyframes prog{0%{left:0;width:0}50%{left:20%;width:60%}100%{left:100%;width:0}}
 
+.btn-run-sticky{position:sticky;bottom:0;background:var(--surface);padding:12px 0;margin:0 -18px 0 -18px;padding-left:18px;padding-right:18px;border-top:1px solid var(--border2);z-index:5;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+html[data-theme="light"] .btn-run-sticky{background:rgba(255,255,255,0.92);}
+
 .metrics-row{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:24px}
-.metric{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-md);padding:16px 16px;border-top:2px solid var(--border2);transition:var(--transition);cursor:default}
+.metric{position:relative;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-md);padding:16px 16px;border-top:2px solid var(--border2);transition:var(--transition);cursor:default}
 .metric:hover{border-top-color:var(--amber);box-shadow:var(--shadow-sm),0 0 0 1px rgba(245,166,35,0.08)}
 .metric-val{font-size:23px;font-weight:700;letter-spacing:-0.8px;color:var(--amber);line-height:1.2}
 .metric-label{font-size:12px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;font-weight:500}
+.metric-info{position:absolute;top:6px;right:6px;width:14px;height:14px;border-radius:50%;background:var(--surface3,var(--border));color:var(--muted);font-size:10px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:help;border:1px solid var(--border);transition:all 0.15s}
+.metric-info:hover{background:var(--amber);color:#0b0d12;border-color:var(--amber)}
+.metric-info-bubble{position:absolute;top:24px;right:6px;width:240px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;display:none;text-align:left;white-space:normal}
+.metric-info-bubble.open{display:block}
+.metric-info-bubble strong{color:var(--amber);font-size:11px;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px}
+.metric-info-bubble code{background:var(--surface);padding:1px 5px;border-radius:3px;font-size:11px}
 
 .comp-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-md);margin-bottom:12px;overflow:hidden;transition:var(--transition)}
 .comp-card:hover{border-color:rgba(245,166,35,0.25);box-shadow:var(--shadow-sm)}
@@ -2511,6 +2534,15 @@ input:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--am
 .user-role{font-size:13px;color:var(--hint);background:var(--surface3);padding:2px 7px;border-radius:5px;border:1px solid var(--border);font-weight:500}
 .btn-logout{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:3px 6px;border-radius:4px;transition:var(--transition)}
 .btn-logout:hover{color:var(--red)}
+/* User dropdown menu */
+.user-area-wrapper{position:relative;display:flex;flex-direction:column;gap:12px}
+.user-menu{position:absolute;top:100%;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.3);padding:6px;min-width:200px;z-index:100;display:none;margin-top:6px}
+.user-menu.open{display:block}
+.user-menu-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:5px;cursor:pointer;font-size:13px;color:var(--text);transition:background 0.15s;user-select:none}
+.user-menu-item:hover{background:var(--surface3)}
+.user-menu-item.danger{color:var(--red)}
+.user-menu-item.danger:hover{background:rgba(220,38,38,0.1)}
+.user-menu-divider{height:1px;background:var(--border2);margin:4px 0}
 /* DB Tab */
 .db-tabs{display:flex;gap:2px;margin:14px 0 0;border-bottom:1px solid var(--border)}
 .db-tab{padding:8px 15px;font-size:14px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:var(--transition)}
@@ -3956,11 +3988,19 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
     <div><div class="logo-text">Ads Intelligence</div><div class="logo-ver">v2.0 · iGaming BG</div></div>
   </div>
   <div id="user-area" style="display:none">
-    <div class="user-badge" onclick="toggleUserMenu()">
-      <div class="user-avatar" id="user-initials">?</div>
-      <div class="user-name" id="user-name-lbl">—</div>
-      <div class="user-role" id="user-role-lbl">analyst</div>
-      <button class="btn-logout" onclick="event.stopPropagation();doSignOut()" title="Изход">⏏</button>
+    <div class="user-area-wrapper">
+      <div class="user-badge" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="user-initials">?</div>
+        <div class="user-name" id="user-name-lbl">—</div>
+      </div>
+      <div class="user-menu" id="user-menu">
+        <div class="user-menu-item" onclick="openSettingsFromMenu()"><span>⚙</span><span>Настройки</span></div>
+        <div class="user-menu-item" onclick="scrollToApiTokens()"><span>🔑</span><span>API ключове</span></div>
+        <div class="user-menu-item" onclick="openCourseFromMenu()"><span>📚</span><span>Курс</span></div>
+        <div class="user-menu-item" onclick="toggleTheme();closeUserMenu()"><span>🌓</span><span>Превключи тема</span></div>
+        <div class="user-menu-divider"></div>
+        <div class="user-menu-item danger" onclick="doSignOut()"><span>⏏</span><span>Изход</span></div>
+      </div>
     </div>
   </div>
   <div id="login-area" style="display:none">
@@ -4028,16 +4068,34 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   </div>
 
   <div class="section">
+    <div class="section-label">Пазар</div>
+    <select id="country" onchange="saveSet();filterChipsByCountry()" style="font-size:13px">
+      <option value="BG">🇧🇬 България</option>
+      <option value="RO">🇷🇴 Румъния</option>
+      <option value="GR">🇬🇷 Гърция</option>
+      <option value="RS">🇷🇸 Сърбия</option>
+    </select>
+  </div>
+
+  <div class="section">
     <div class="section-label">Конкуренти</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;color:var(--muted)">
+      <span><strong id="chips-counter">0</strong> от <span id="chips-total">0</span> избрани</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn-tiny" onclick="selectAllChips()" title="Избери всички">Всички</button>
+        <button class="btn-tiny" onclick="deselectAllChips()" title="Размаркирай всички">Никой</button>
+      </div>
+    </div>
     <div class="chips" id="chips">
-      <div class="chip active" data-q="inbet">Inbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip active" data-q="efbet">Efbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip active" data-q="betano">Betano<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip" data-q="winbet">Winbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip" data-q="slybet">SlyBet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip" data-q="calavera">Calavera<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip" data-q="palms bet">Palms Bet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip" data-q="eurobet">Eurobet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <div class="chip active" data-q="inbet" data-country="BG">Inbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <div class="chip active" data-q="efbet" data-country="BG">Efbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <div class="chip active" data-q="betano" data-country="BG">Betano<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <div class="chip" data-q="winbet" data-country="BG">Winbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <div class="chip" data-q="slybet" data-country="BG">SlyBet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <div class="chip" data-q="calavera" data-country="BG">Calavera<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <div class="chip" data-q="palms bet" data-country="BG">Palms Bet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <!-- За да добавиш бранд от друга държава: data-country="RO" / "GR" / "RS" -->
+      <div class="chip" data-q="eurobet" data-country="BG">Eurobet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
     </div>
     <div class="custom-add">
       <input type="text" id="custom-q" placeholder="Добави бранд..." onkeydown="if(event.key==='Enter')addChip()">
@@ -4063,15 +4121,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-label">Пазар</div>
-    <select id="country" onchange="saveSet()" style="font-size:13px">
-      <option value="BG">🇧🇬 България</option>
-      <option value="RO">🇷🇴 Румъния</option>
-      <option value="GR">🇬🇷 Гърция</option>
-      <option value="RS">🇷🇸 Сърбия</option>
-    </select>
-  </div>
+
 
   <div class="section">
     <button class="collapsible-toggle" onclick="toggleCol('opt-b','opt-a')"><span id="opt-a">▶</span> Настройки</button>
@@ -4111,20 +4161,22 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   </div>
 
   <div style="flex:1"></div>
-  <div class="run-section">
-    <div class="run-summary" id="run-summary">
-      Избери конкуренти горе и натисни бутона
+  <div class="btn-run-sticky">
+    <div class="run-section">
+      <div class="run-summary" id="run-summary">
+        Избери конкуренти горе и натисни бутона
+      </div>
+      <button class="btn-run" id="run-btn" onclick="run()">
+        <span id="run-btn-label">▶ Анализирай</span>
+      </button>
     </div>
-    <button class="btn-run" id="run-btn" onclick="run()">
-      <span id="run-btn-label">▶ Анализирай</span>
-    </button>
   </div>
 </aside>
 
 <main class="main">
   <nav class="nav-tabs">
     <div class="nav-tab active" id="navtab-dashboard" onclick="switchTab('dashboard')">Dashboard</div>
-    <div class="nav-tab" id="navtab-copy-lib" onclick="switchTab('copy-lib')">Copy Library</div>
+    <div class="nav-tab" id="navtab-copy-lib" onclick="switchTab('copy-lib')">Креативи</div>
     <div class="nav-tab" onclick="switchTab('database')" id="nav-database">База <span id="db-online" style="display:none"><span class="realtime-dot"></span></span></div>
     <div class="nav-tab" onclick="switchTab('alerts')">Сигнали <span id="nav-alert-badge" style="display:none;background:var(--red);color:#fff;font-size:12px;padding:1px 6px;border-radius:9px;margin-left:4px;font-weight:700">0</span></div>
     <div class="nav-tab" id="navtab-history" onclick="switchTab('history')">⌛ История</div>
@@ -4195,14 +4247,88 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
       <span id="focus-count-text">Показани 0 реклами</span>
       <button class="btn-action" onclick="toggleFocusMode()" style="padding:3px 10px;font-size:12px">× Изход</button>
     </div>
+    <!-- TODO: Future enhancement — show/hide columns picker -->
     <div id="metrics-row" style="display:none" class="metrics-row">
-      <div class="metric" title="Активни реклами в Meta Ad Library за избраните брандове"><div class="metric-val" id="m1">—</div><div class="metric-label">Активни реклами</div></div>
-      <div class="metric" title="Брой брандове върнали поне една реклама"><div class="metric-val" id="m2">—</div><div class="metric-label">Брандове с реклами</div></div>
-      <div class="metric" title="Най-дълго работеща реклама — индикатор за winning creative"><div class="metric-val" id="m3">—</div><div class="metric-label">Winner (дни активна)</div></div>
-      <div class="metric" title="Минимален месечен бюджет (от Meta-публикуван диапазон)"><div class="metric-val" id="m4">—</div><div class="metric-label">Мин. бюджет (€/мес)</div></div>
-      <div class="metric" title="Реклами стартирали през последните 7 дни"><div class="metric-val" id="m5">—</div><div class="metric-label">Нови (7 дни)</div></div>
-      <div class="metric" title="Оценена обща цена на реклама — базирана на Meta impression range и БГ iGaming CPM €1.5–€3"><div class="metric-val" id="m6">—</div><div class="metric-label">Оценена цена (€)</div></div>
+      <div class="metric">
+        <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
+        <div class="metric-info-bubble">
+          <strong>Какво измерва</strong>
+          <p style="margin:0 0 6px">Брой реклами в Meta Ad Library с status=ACTIVE към момента на скана за избраните брандове.</p>
+          <strong>Как се изчислява</strong>
+          <p style="margin:0 0 6px">Сума от <code>count</code> полето върнато от <code>graph.facebook.com/v21.0/ads_archive</code> за всеки бранд.</p>
+          <strong>Пример</strong>
+          <p style="margin:0">Ако Efbet има 43, Betano 12, Winbet 7 → показва 62.</p>
+        </div>
+        <div class="metric-val" id="m1">—</div>
+        <div class="metric-label">Активни реклами</div>
+      </div>
+      <div class="metric">
+        <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
+        <div class="metric-info-bubble">
+          <strong>Какво измерва</strong>
+          <p style="margin:0 0 6px">Колко от избраните брандове върнаха поне една активна реклама.</p>
+          <strong>Как се изчислява</strong>
+          <p style="margin:0 0 6px">Филтър <code>count > 0</code> върху избраните брандове.</p>
+          <strong>Пример</strong>
+          <p style="margin:0">Избра 5 бранда, 3 имат реклами → показва 3.</p>
+        </div>
+        <div class="metric-val" id="m2">—</div>
+        <div class="metric-label">Брандове с реклами</div>
+      </div>
+      <div class="metric">
+        <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
+        <div class="metric-info-bubble">
+          <strong>Какво измерва</strong>
+          <p style="margin:0 0 6px">Най-дълго работещата реклама в текущия скан — индикатор за winning creative.</p>
+          <strong>Как се изчислява</strong>
+          <p style="margin:0 0 6px"><code>max(daysActive)</code> сред всички реклами. <code>daysActive = днес − ad_creation_date</code>.</p>
+          <strong>Пример</strong>
+          <p style="margin:0">Ако реклама е стартирана преди 47 дни и още е активна → 47д. ⚠ Дълга активност означава, че бранда я счита за работеща.</p>
+        </div>
+        <div class="metric-val" id="m3">—</div>
+        <div class="metric-label">Winner (дни активна)</div>
+      </div>
+      <div class="metric">
+        <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
+        <div class="metric-info-bubble">
+          <strong>Какво измерва</strong>
+          <p style="margin:0 0 6px">Минималният месечен бюджет (долна граница), оценен от Meta-публикувания spend range.</p>
+          <strong>Как се изчислява</strong>
+          <p style="margin:0 0 6px">Сума от долните граници (<code>spend.lower_bound</code>) на активни реклами, конвертирани в € (BGN→EUR ÷ 1.96). Само от EU-targeted реклами с публичен range.</p>
+          <strong>Пример</strong>
+          <p style="margin:0">30 реклами с lower_bound по €100 → €3000/мес. ⚠ Това е МИНИМУМ. Реалният бюджет често е 2-5x повече.</p>
+        </div>
+        <div class="metric-val" id="m4">—</div>
+        <div class="metric-label">Мин. бюджет (€/мес)</div>
+      </div>
+      <div class="metric">
+        <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
+        <div class="metric-info-bubble">
+          <strong>Какво измерва</strong>
+          <p style="margin:0 0 6px">Реклами стартирали през последните 7 дни — сигнал за нова кампания или тест.</p>
+          <strong>Как се изчислява</strong>
+          <p style="margin:0 0 6px">Филтър <code>ad_creation_date >= днес−7дни</code> за активни реклами.</p>
+          <strong>Пример</strong>
+          <p style="margin:0">12 реклами стартирали тази седмица → 12.</p>
+        </div>
+        <div class="metric-val" id="m5">—</div>
+        <div class="metric-label">Нови (7 дни)</div>
+      </div>
+      <div class="metric">
+        <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
+        <div class="metric-info-bubble">
+          <strong>Какво измерва</strong>
+          <p style="margin:0 0 6px">Прогнозна обща инвестиция в показаните реклами (от старт до сега).</p>
+          <strong>Как се изчислява</strong>
+          <p style="margin:0 0 6px"><code>Σ (impressions_midpoint × CPM/1000)</code>, където CPM = €1.50–€3.00 за БГ iGaming (взимаме средно €2.25). impressions_midpoint = средна стойност от Meta range.</p>
+          <strong>Пример</strong>
+          <p style="margin:0">5M impressions × €2.25 / 1000 = €11,250. ⚠ Оценка с широка грешка (±40%). За ориентир, не точна стойност.</p>
+        </div>
+        <div class="metric-val" id="m6">—</div>
+        <div class="metric-label">Оценена цена (€)</div>
+      </div>
     </div>
+
     <div id="ai-panel" style="display:none" class="ai-panel ai-panel-hero">
       <div class="ai-panel-hdr">
         <div class="ai-panel-icon">◆</div>
@@ -4321,7 +4447,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           </div>
           <div class="welcome-feature-title">Тренди &amp; Сравнение</div>
-          <div class="welcome-feature-desc">30-дневен timeline + Brand Battle</div>
+          <div class="welcome-feature-desc">30-дневен timeline + Ad Presence by Brand</div>
         </div>
       </div>
     </div></div>
@@ -4336,7 +4462,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 
   <div class="tab-content" id="tab-copy-lib">
     <div class="header-row">
-      <div class="page-title">Copy Library</div>
+      <div class="page-title">Креативи</div>
       <div class="header-actions">
         <button class="btn-action" id="btn-focus-copylib" style="display:none" onclick="toggleFocusModeCopyLib()" title="Показва само winning + saved copy">Focus</button>
         <button class="btn-action" id="btn-heatmap-toggle" onclick="toggleHeatmap()" title="Честота на фрази в competitor copy — кои думи и изрази се повтарят най-много">Фрази Heatmap</button>
@@ -4858,6 +4984,7 @@ window.onload=()=>{
     // Auto-cleanup history > 90 days on every load
     if(typeof cleanupOldData==='function')cleanupOldData();
     if(typeof applyRemovedChips==='function')applyRemovedChips();
+    if(typeof filterChipsByCountry==='function')filterChipsByCountry();
     document.getElementById('sb-url').value=d.sbu||'https://xffynapyueqkleipldzs.supabase.co';
     document.getElementById('sb-key').value=d.sbk||'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmZnluYXB5dWVxa2xlaXBsZHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczODMxNjIsImV4cCI6MjA5Mjk1OTE2Mn0.0anTSSSOvKOEvl_33izQsPeckw2ShyAbiVK1RrpqbQA';
     waitForSupabaseCDN(()=>{try{connectSupabase();}catch(e){console.warn('[sb] connect failed',e);}});
@@ -4921,6 +5048,7 @@ function removeChip(btn){
   chip.remove();
   if(typeof updateRunSummary==='function')updateRunSummary();
   if(typeof renderAliasSection==='function')renderAliasSection();
+  if(typeof updateChipsCounter==='function')updateChipsCounter();
   if(typeof toast==='function')toast('Бранд премахнат','success');
 }
 
@@ -4941,14 +5069,58 @@ function addChip(){
   setRemovedChips(removed);
   // Skip if already exists
   const existing=document.querySelector(`#chips .chip[data-q="${CSS.escape(q)}"]`);
-  if(existing){existing.classList.add('active');i.value='';updateRunSummary();renderAliasSection();toast('Брандът е добавен','success');return;}
+  if(existing){existing.classList.add('active');i.value='';updateRunSummary();renderAliasSection();updateChipsCounter();toast('Брандът е добавен','success');return;}
   const c=document.createElement('div');
   c.className='chip active';
   c.dataset.q=q;
+  c.dataset.country=document.getElementById('country').value;
   c.innerHTML=`${v.replace(/[<>]/g,'')}<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button>`;
   c.onclick=()=>{c.classList.toggle('active');updateRunSummary();renderAliasSection();};
   document.getElementById('chips').appendChild(c);
-  i.value='';updateRunSummary();renderAliasSection();toast('Брандът е добавен','success');
+  i.value='';updateRunSummary();renderAliasSection();updateChipsCounter();toast('Брандът е добавен','success');
+}
+
+// ── Chip Counter & Filters ───────────────────────────────────────
+function updateChipsCounter(){
+  const visibleChips=document.querySelectorAll('#chips .chip:not([style*="display:none"])');
+  const activeChips=[...visibleChips].filter(c=>c.classList.contains('active'));
+  const counterEl=document.getElementById('chips-counter');
+  const totalEl=document.getElementById('chips-total');
+  if(counterEl)counterEl.textContent=activeChips.length;
+  if(totalEl)totalEl.textContent=visibleChips.length;
+}
+
+function selectAllChips(){
+  document.querySelectorAll('#chips .chip:not([style*="display:none"])').forEach(c=>{
+    c.classList.add('active');
+  });
+  if(typeof updateRunSummary==='function')updateRunSummary();
+  if(typeof renderAliasSection==='function')renderAliasSection();
+  updateChipsCounter();
+  if(typeof toast==='function')toast('Маркирани са всички','success');
+}
+
+function deselectAllChips(){
+  document.querySelectorAll('#chips .chip').forEach(c=>{
+    c.classList.remove('active');
+  });
+  if(typeof updateRunSummary==='function')updateRunSummary();
+  updateChipsCounter();
+}
+
+function filterChipsByCountry(){
+  const country=document.getElementById('country').value;
+  document.querySelectorAll('#chips .chip').forEach(c=>{
+    const dc=c.dataset.country||'BG';
+    if(dc===country){
+      c.style.display='';
+    }else{
+      c.style.display='none';
+      c.classList.remove('active');
+    }
+  });
+  if(typeof updateRunSummary==='function')updateRunSummary();
+  updateChipsCounter();
 }
 
 // ── Shadow Tracker ──────────────────────────────────────────────
@@ -6475,9 +6647,10 @@ function renderDash(res){
       <div class="dash-battle-card">
         <div class="dash-section-title">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          BRAND BATTLE
+          AD PRESENCE BY BRAND
         </div>
         <div id="dash-battle-host"></div>
+        <div style="font-size:11px;color:var(--muted);font-style:italic;margin:4px 0 12px">Обемът на реклами не е индикатор за пазарна сила — само за активност и стратегия.</div>
       </div>
       <div class="dash-summary-card" id="dash-summary-host"></div>
     </div>
@@ -7365,6 +7538,7 @@ function updateRunSummary(){
   const stTxt=st?.options[st.selectedIndex]?.text||'';
   el.innerHTML=`<span>${chips.length} бранда</span> · ${mkt} · ${stTxt} · <span>до ${lim?.value||50}</span> реклами`;
   if(typeof updateRunBtnState==='function')updateRunBtnState();
+  if(typeof updateChipsCounter==='function')updateChipsCounter();
 }
 
 function parseAI(text){
@@ -8721,7 +8895,34 @@ function toggleAuthMode(mode){
   document.getElementById('auth-title').textContent=mode==='login'?'Вход в екипа':'Регистрация';
   document.getElementById('auth-err').classList.remove('show');
 }
-function toggleUserMenu(){showAuth();}
+function toggleUserMenu(){
+  const m=document.getElementById('user-menu');
+  if(!m)return;
+  m.classList.toggle('open');
+}
+function closeUserMenu(){
+  document.getElementById('user-menu')?.classList.remove('open');
+}
+function openSettingsFromMenu(){
+  const body=document.getElementById('api-b');
+  if(body&&!body.classList.contains('open')){toggleCol('api-b','api-a');}
+  body?.scrollIntoView({behavior:'smooth',block:'start'});
+  closeUserMenu();
+}
+function scrollToApiTokens(){
+  openSettingsFromMenu();
+}
+function openCourseFromMenu(){
+  if(typeof openCourseModal==='function')openCourseModal();
+  closeUserMenu();
+}
+document.addEventListener('click',(e)=>{
+  const menu=document.getElementById('user-menu');
+  const badge=document.querySelector('.user-badge');
+  if(menu?.classList.contains('open') && !menu.contains(e.target) && !badge?.contains(e.target)){
+    closeUserMenu();
+  }
+});
 
 async function doSignIn(){
   if(!sbClient){toast('Свържи Supabase първо');return;}
@@ -12737,6 +12938,19 @@ function toggleFocusMode(){
     if(btn){btn.textContent='Focus';btn.style.color='';btn.style.borderColor='';}
   }
 }
+
+// ── Metric Info Bubble Toggle ──────────────────────────────
+function toggleInfoBubble(el){
+  // close all others
+  document.querySelectorAll('.metric-info-bubble.open').forEach(b=>{if(b!==el.nextElementSibling)b.classList.remove('open');});
+  el.nextElementSibling?.classList.toggle('open');
+}
+// outside click closes
+document.addEventListener('click',(e)=>{
+  if(!e.target.closest('.metric-info')&&!e.target.closest('.metric-info-bubble')){
+    document.querySelectorAll('.metric-info-bubble.open').forEach(b=>b.classList.remove('open'));
+  }
+});
 
 // ── Command Palette (Cmd+K) ──────────────────────────────
 const CMDK_RECENT_KEY='ads-intel-cmdk-recent';
