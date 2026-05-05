@@ -64,7 +64,8 @@ const HELP_CONTENT={
           '<strong>Focus:</strong> Скрива всичко освен winner + нови реклами',
           '<strong>⏰ Автосканиране:</strong> Настроишься интервала в API Tokens → Автоматичен скан (6ч/12ч/24ч/48ч) и активирай за фоново мониториране без да отваряш приложението',
           '<strong>Сортирай:</strong> Dropdown в brand filter row подрежда картите по брой реклами, нови (7д), est. spend, winner longevity или азбучно — запазва се в localStorage',
-          '<strong>Multi-select (bulk):</strong> Кликни чекбокса горе-вляво на реклама (□) за да я маркираш. При 2+ избрани се появява плаваща лента отдолу с действия: ⭐ Към Swipe, ⇄ Сравни (макс 4), ⬇ Експорт CSV, 📋 Копирай текст. <kbd>Esc</kbd> изчиства избора.'
+          '<strong>Multi-select (bulk):</strong> Кликни чекбокса горе-вляво на реклама (□) за да я маркираш. При 2+ избрани се появява плаваща лента отдолу с действия: ⭐ Към Swipe, ⇄ Сравни (макс 4), ⬇ Експорт CSV, 📋 Копирай текст. <kbd>Esc</kbd> изчиства избора.',
+          '<strong>Dashboard Изглед:</strong> Скрий карти с × в горен десен ъгъл. Презапиши изгледа от потребителското меню → Изглед на Dashboard (Detailed/Compact/iGaming Focus) или ⌘K → Управление на карти.'
         ]
       },
       {
@@ -4097,11 +4098,28 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .onb-course-cta-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
 .onb-course-cta-sub{font-size:12px;color:var(--muted);line-height:1.45}
 .onb-course-cta-arrow{font-size:20px;color:var(--amber);font-weight:700;flex-shrink:0}
+/* ── Dashboard Customization ────────────────────────── */
+.dash-card-hide{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;opacity:0.5;z-index:2}
+.dash-card-hide:hover{background:rgba(248,113,113,0.15);color:#f87171;border-color:#f87171;opacity:1;transform:rotate(90deg)}
+[data-dash-card]{position:relative}
+.user-menu-section-label{padding:6px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.card-mgr-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn 0.2s}
+.card-mgr-modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:92%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,0.5)}
+.card-mgr-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.card-mgr-title{font-size:16px;font-weight:700;color:var(--text)}
+.card-mgr-close{background:transparent;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+.card-mgr-close:hover{background:var(--surface2);color:var(--text)}
+.card-mgr-body{padding:18px 22px;overflow-y:auto;flex:1}
+.card-mgr-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background 0.15s;font-size:14px;color:var(--text)}
+.card-mgr-item:hover{background:var(--surface2)}
+.card-mgr-item input{width:18px;height:18px;accent-color:var(--amber);cursor:pointer}
+.card-mgr-footer{display:flex;justify-content:space-between;gap:10px;padding:14px 22px;border-top:1px solid var(--border)}
 @media (max-width:640px){
   .onb-modal{max-height:95vh;border-radius:14px;max-width:100%}
   .onb-title{font-size:18px}
   .onb-body{padding:14px 18px}
   .onb-action-btn{padding:12px 14px}
+  .card-mgr-modal{width:96%;max-width:100%}
 }
 </style>
 </head>
@@ -4127,6 +4145,13 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
         <div class="user-menu-item" onclick="openCourseFromMenu()"><span>📚</span><span data-i18n="user.course">Курс</span></div>
         <div class="user-menu-item" onclick="toggleTheme();closeUserMenu()"><span>🌓</span><span data-i18n="user.theme">Превключи тема</span></div>
         <div class="user-menu-item" onclick="toggleLang();closeUserMenu()"><span>🌐</span><span data-i18n="user.lang">Език (BG/EN)</span></div>
+        <div class="user-menu-divider"></div>
+        <div class="user-menu-section-label">📋 Изглед на Dashboard</div>
+        <div class="user-menu-item" onclick="applyDashPreset('detailed');closeUserMenu()"><span>📊</span><span>Detailed (всички)</span></div>
+        <div class="user-menu-item" onclick="applyDashPreset('compact');closeUserMenu()"><span>⚡</span><span>Compact (само KPI)</span></div>
+        <div class="user-menu-item" onclick="applyDashPreset('igaming');closeUserMenu()"><span>💰</span><span>iGaming Focus</span></div>
+        <div class="user-menu-item" onclick="showAllCards();closeUserMenu()"><span>↻</span><span>Възстанови всички</span></div>
+        <div class="user-menu-item" onclick="openCardManagerModal();closeUserMenu()"><span>⋯</span><span>Управление на карти</span></div>
         <div class="user-menu-divider"></div>
         <div class="user-menu-item danger" onclick="doSignOut()"><span>⏏</span><span data-i18n="user.logout">Изход</span></div>
       </div>
@@ -4378,7 +4403,9 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
       <button class="btn-action" onclick="toggleFocusMode()" style="padding:3px 10px;font-size:12px">× Изход</button>
     </div>
     <!-- TODO: Future enhancement — show/hide columns picker -->
-    <div id="metrics-row" style="display:none" class="metrics-row">
+    <div data-dash-card="metrics-row" style="display:none;position:relative" id="metrics-row-wrapper">
+      <button class="dash-card-hide" onclick="hideDashCard('metrics-row')" title="Скрий метриките">×</button>
+      <div id="metrics-row" class="metrics-row">
       <div class="metric">
         <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
         <div class="metric-info-bubble">
@@ -4456,6 +4483,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
         </div>
         <div class="metric-val" id="m6">—</div>
         <div class="metric-label" data-i18n="metric.estimated-cost">Оценена цена (€)</div>
+      </div>
       </div>
     </div>
 
@@ -5138,11 +5166,43 @@ window.onload=()=>{
     if(typeof maybeShowOnboarding==='function')maybeShowOnboarding();
     // Apply i18n translations
     if(typeof applyI18n==='function')applyI18n();
+    // Pull server-side auto-scan results if deployed
+    if(typeof loadAutoScanData==='function')loadAutoScanData();
   }catch(e){
     console.error('[init] fatal init error:',e);
     toast('Грешка при стартиране — провери конзолата','error');
   }
 };
+// ── Auto-scan integration: pull server-side scan results from data/latest.json ──
+async function loadAutoScanData(){
+  try{
+    const res=await fetch('data/latest.json',{cache:'no-cache'});
+    if(!res.ok)return;
+    const scan=await res.json();
+    if(!scan.brands?.length)return;
+    const histKey='ads-intel-hist';
+    const hist=JSON.parse(localStorage.getItem(histKey)||'[]');
+    const autoId='auto-'+new Date(scan.timestamp).getTime();
+    if(hist.find(h=>h.id===autoId))return;
+    const scanEntry={
+      id:autoId,
+      ts:scan.timestamp,
+      brands:scan.brands.map(b=>b.name),
+      author:'🤖 Auto-scan',
+      email:null,
+      results:scan.brands.map(b=>({
+        name:b.name,count:b.count,copies:b.copies||[],
+        ps:{},st:null,it:null,new7:0,wd:0,
+        pages:[],shadowCount:0,splits:[],
+      })),
+    };
+    hist.unshift(scanEntry);
+    localStorage.setItem(histKey,JSON.stringify(hist.slice(0,30)));
+    if(typeof toast==='function')toast('🤖 Зареден auto-scan от '+new Date(scan.timestamp).toLocaleDateString('bg-BG'),'success');
+    if(typeof renderHist==='function')renderHist();
+  }catch(e){console.warn('[auto-scan] load failed:',e.message);}
+}
+
 function saveSet(){localStorage.setItem('ads-intel-v2',JSON.stringify({fb:document.getElementById('fb-token').value,cl:document.getElementById('claude-token').value,co:document.getElementById('country').value,sbu:document.getElementById('sb-url').value,sbk:document.getElementById('sb-key').value,strict:document.getElementById('strict-mode')?.checked||false,autoCleanup:document.getElementById('auto-cleanup')?.checked!==false,tg:document.getElementById('tg-token').value,tgc:document.getElementById('tg-chat').value,fdo:document.getElementById('fdo-token')?.value||'',as:document.getElementById('auto-scan-on')?.checked||false,ai:parseInt(document.getElementById('auto-scan-interval')?.value)||12}));if(typeof updateRunBtnState==='function')updateRunBtnState();}
 function applyStrictMode(){
   const strict=document.getElementById('strict-mode')?.checked;
@@ -6471,7 +6531,8 @@ function renderBenchmarksPanel(){
   const typeTotal=Object.values(bm.typeMix).reduce((a,b)=>a+b,0)||1;
   const collapsed=localStorage.getItem('ads-intel-bm-collapsed')==='1';
   container.innerHTML=`
-    <div class="benchmarks-panel">
+    <div class="benchmarks-panel" style="position:relative">
+      <button class="dash-card-hide" onclick="hideDashCard('benchmarks')" title="Скрий">×</button>
       <div class="benchmarks-header">
         <div class="benchmarks-title">
           <div class="benchmarks-title-icon">📊</div>
@@ -6744,6 +6805,120 @@ function clearActivePresetIfChanged(){
   }
 }
 
+/* ── Dashboard Layout State ────────────────────────────────────────── */
+const DASH_LAYOUT_KEY='ads-intel-dash-layout';
+const DASH_LAYOUT_VERSION=1;
+const ALL_CARDS=[
+  {id:'metrics-row',label:'📊 Метрики (KPI)',default:true},
+  {id:'dash-timeline',label:'📈 Активност по дни',default:true},
+  {id:'dash-battle',label:'⚔ Ad Presence by Brand',default:true},
+  {id:'dash-summary',label:'🤖 AI Резюме',default:true},
+  {id:'welcome-bonus',label:'💰 Welcome Bonus Battle',default:true},
+  {id:'benchmarks',label:'🎯 Бенчмарки',default:true},
+];
+const PRESETS={
+  detailed:{name:'Detailed',sub:'Всички карти видими',cards:ALL_CARDS.map(c=>c.id)},
+  compact:{name:'Compact',sub:'Само ключови — KPI + AI',cards:['metrics-row','dash-summary']},
+  igaming:{name:'iGaming Focus',sub:'Фокус върху бонуси и тренд',cards:['metrics-row','welcome-bonus','dash-battle','dash-timeline']},
+};
+function getDashLayout(){
+  try{
+    const raw=localStorage.getItem(DASH_LAYOUT_KEY);
+    if(!raw)return ALL_CARDS.filter(c=>c.default).map(c=>c.id);
+    const parsed=JSON.parse(raw);
+    if(parsed.v!==DASH_LAYOUT_VERSION){
+      localStorage.removeItem(DASH_LAYOUT_KEY);
+      return ALL_CARDS.filter(c=>c.default).map(c=>c.id);
+    }
+    return parsed.cards||[];
+  }catch{return ALL_CARDS.filter(c=>c.default).map(c=>c.id);}
+}
+function saveDashLayout(cards){
+  localStorage.setItem(DASH_LAYOUT_KEY,JSON.stringify({v:DASH_LAYOUT_VERSION,cards}));
+}
+function applyDashLayout(){
+  const visible=new Set(getDashLayout());
+  const cardSelectors={
+    'metrics-row':'[data-dash-card="metrics-row"]',
+    'dash-timeline':'[data-dash-card="dash-timeline"]',
+    'dash-battle':'[data-dash-card="dash-battle"]',
+    'dash-summary':'[data-dash-card="dash-summary"]',
+    'welcome-bonus':'[data-dash-card="welcome-bonus"]',
+    'benchmarks':'[data-dash-card="benchmarks"]',
+  };
+  Object.entries(cardSelectors).forEach(([id,sel])=>{
+    const el=document.querySelector(sel);
+    if(!el)return;
+    if(visible.has(id)){
+      if(el.dataset.dashHidden==='1'){el.style.display='';el.removeAttribute('data-dash-hidden');}
+    }else{
+      el.style.display='none';
+      el.dataset.dashHidden='1';
+    }
+  });
+  const battle=document.querySelector('[data-dash-card="dash-battle"]');
+  const summary=document.querySelector('[data-dash-card="dash-summary"]');
+  const row=document.querySelector('.dash-bottom-row');
+  if(row&&battle&&summary){
+    const bh=battle.style.display==='none';
+    const sh=summary.style.display==='none';
+    row.style.display=(bh&&sh)?'none':'';
+  }
+}
+function hideDashCard(id){
+  const cards=getDashLayout().filter(c=>c!==id);
+  saveDashLayout(cards);
+  applyDashLayout();
+  if(typeof toast==='function')toast('Картата е скрита. Възстанови от ⋯ Карти меню.','info');
+}
+function showAllCards(){
+  saveDashLayout(ALL_CARDS.map(c=>c.id));
+  applyDashLayout();
+  if(typeof toast==='function')toast('Всички карти са показани','success');
+}
+function applyDashPreset(preset){
+  const p=PRESETS[preset];
+  if(!p)return;
+  saveDashLayout(p.cards);
+  applyDashLayout();
+  if(typeof toast==='function')toast('Приложен изглед: '+p.name,'success');
+}
+function toggleCardVisibility(id,visible){
+  const cards=new Set(getDashLayout());
+  if(visible)cards.add(id);else cards.delete(id);
+  saveDashLayout([...cards]);
+  applyDashLayout();
+}
+function openCardManagerModal(){
+  const visible=new Set(getDashLayout());
+  const items=ALL_CARDS.map(c=>`
+    <label class="card-mgr-item">
+      <input type="checkbox" ${visible.has(c.id)?'checked':''} onchange="toggleCardVisibility('${c.id}',this.checked)">
+      <span>${c.label}</span>
+    </label>`).join('');
+  const overlay=document.createElement('div');
+  overlay.id='card-mgr-overlay';
+  overlay.className='card-mgr-overlay';
+  overlay.onclick=(e)=>{if(e.target===overlay)closeCardManagerModal();};
+  overlay.innerHTML=`
+    <div class="card-mgr-modal">
+      <div class="card-mgr-header">
+        <div class="card-mgr-title">📋 Управление на dashboard карти</div>
+        <button class="card-mgr-close" onclick="closeCardManagerModal()">×</button>
+      </div>
+      <div class="card-mgr-body">
+        <p style="margin:0 0 14px;color:var(--muted);font-size:13px">Маркирай кои карти искаш да виждаш на dashboard-а.</p>
+        ${items}
+      </div>
+      <div class="card-mgr-footer">
+        <button class="btn-sm" onclick="showAllCards();closeCardManagerModal()">↻ Покажи всички</button>
+        <button class="btn-sm" onclick="closeCardManagerModal()">Готово</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+function closeCardManagerModal(){document.getElementById('card-mgr-overlay')?.remove();}
+
 function renderDash(res){
   window.results=res; // sync local results -> window for cross-feature access (Playbook, Network, Benchmarks, AI)
   // Apply advanced filter to results
@@ -6765,10 +6940,14 @@ function renderDash(res){
   document.getElementById('m4').textContent=totSpend?'€'+fm(totSpend)+'+':'—';
   document.getElementById('m5').textContent=totNew;
   document.getElementById('m6').textContent=estSpends.length>0?'€'+fm(totEstLow)+'-'+fm(totEstHigh):'—';
-  document.getElementById('metrics-row').style.display='grid';
+  const metricsWrapper=document.getElementById('metrics-row-wrapper');
+  if(metricsWrapper)metricsWrapper.style.display='';
+  const metricsRow=document.getElementById('metrics-row');
+  if(metricsRow)metricsRow.style.display='grid';
   // Dashboard v2: v2Top is prepended to brand cards html at the bottom of this function
   const v2Top=`
-    <div class="dash-timeline-card">
+    <div class="dash-timeline-card" data-dash-card="dash-timeline">
+      <button class="dash-card-hide" onclick="hideDashCard('dash-timeline')" title="Скрий">×</button>
       <div class="dash-section-title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         АКТИВНОСТ ПО ДНИ — 30 скана
@@ -6776,7 +6955,8 @@ function renderDash(res){
       <div id="dash-timeline-host"></div>
     </div>
     <div class="dash-bottom-row">
-      <div class="dash-battle-card">
+      <div class="dash-battle-card" data-dash-card="dash-battle">
+        <button class="dash-card-hide" onclick="hideDashCard('dash-battle')" title="Скрий">×</button>
         <div class="dash-section-title">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           AD PRESENCE BY BRAND
@@ -6784,9 +6964,12 @@ function renderDash(res){
         <div id="dash-battle-host"></div>
         <div style="font-size:11px;color:var(--muted);font-style:italic;margin:4px 0 12px">Обемът на реклами не е индикатор за пазарна сила — само за активност и стратегия.</div>
       </div>
-      <div class="dash-summary-card" id="dash-summary-host"></div>
+      <div class="dash-summary-card" data-dash-card="dash-summary" id="dash-summary-host">
+        <button class="dash-card-hide" onclick="hideDashCard('dash-summary')" title="Скрий">×</button>
+      </div>
     </div>
-    <div class="card welcome-bonus-card" id="welcome-bonus-card" style="display:none">
+    <div class="card welcome-bonus-card" id="welcome-bonus-card" data-dash-card="welcome-bonus" style="display:none;position:relative">
+      <button class="dash-card-hide" onclick="hideDashCard('welcome-bonus')" title="Скрий">×</button>
       <div class="card-hdr">
         <div class="card-title">💰 Welcome Bonus Battle</div>
         <div class="card-sub">Извлечени welcome оферти от рекламните текстове · сравнение по брандове</div>
@@ -6799,7 +6982,7 @@ function renderDash(res){
       <div id="welcome-bonus-table-host"></div>
       <div class="welcome-bonus-disclaimer">⚠ Извлечените стойности са от рекламните текстове в Meta Ad Library. За точни условия (wager, минимален депозит, срок) провери официалния сайт на бранда.</div>
     </div>
-    <div id="benchmarks-panel-mount"></div>`;
+    <div id="benchmarks-panel-mount" data-dash-card="benchmarks"></div>`;
   // Build charts (called after html is written to dash-content below)
   // v2Top injected at line 1860 together with brand cards html
   document.getElementById('btn-export').style.display='';
@@ -6865,6 +7048,8 @@ function renderDash(res){
   // Inject filter presets bar
   if(typeof injectPresetBar==='function')setTimeout(injectPresetBar,50);
   if(typeof clearActivePresetIfChanged==='function')clearActivePresetIfChanged();
+  // Apply dashboard layout customization
+  if(typeof applyDashLayout==='function')setTimeout(applyDashLayout,50);
 }
 
 function tCard(i){const b=document.getElementById('cbody-'+i),c=document.getElementById('chev-'+i);b.classList.toggle('open');c.classList.toggle('open');}
@@ -13288,6 +13473,10 @@ function buildCmdkItems(query){
     {id:'search',label:'🔍 Глобално търсене',sub:'Open search overlay',keywords:'search търси',action:()=>{closeCmdK();if(typeof openGSearch==='function')setTimeout(openGSearch,100);}},
     {id:'export-data',label:'📤 Експорт всички данни',sub:'GDPR data export',keywords:'export gdpr данни',action:()=>{if(typeof exportAllData==='function')exportAllData();}},
     {id:'abv',label:'🧪 A/B Variant Inspector',sub:'Преглед на детектирани A/B клъстери',keywords:'ab variant test split',action:()=>{if(typeof openAbvInspector==='function')openAbvInspector();}},
+    {id:'dash-detailed',label:'📊 Изглед: Detailed',sub:'Всички карти видими',keywords:'view layout detailed all карти',action:()=>applyDashPreset('detailed')},
+    {id:'dash-compact',label:'⚡ Изглед: Compact',sub:'Само KPI и AI',keywords:'view layout compact карти',action:()=>applyDashPreset('compact')},
+    {id:'dash-igaming',label:'💰 Изглед: iGaming Focus',sub:'Бонуси + бранд активност',keywords:'view layout igaming карти',action:()=>applyDashPreset('igaming')},
+    {id:'dash-cards',label:'📋 Управление на карти',sub:'Покажи/скрий dashboard карти',keywords:'manage cards layout карти',action:()=>openCardManagerModal()},
     {id:'onboarding',label:'👋 Покажи onboarding',sub:'Преразгледай wizard-а за първо влизане',keywords:'onboarding wizard tour помощ начало',action:()=>{localStorage.removeItem('ads-intel-onboarding-done');if(typeof openOnboardingWizard==='function')openOnboardingWizard();}}
   ];
   actions.forEach(a=>{
