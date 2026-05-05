@@ -313,6 +313,91 @@ const ONBOARDING_KEY='ads-intel-onboarding-done';
 const PRESET_BG_BRANDS=['Inbet','Efbet','Betano','Winbet','Sesame','Calavera','Slybet','Palms Bet','Eurobet','Bet365'];
 let _onbStep=1,_onbSelectedBrands=new Set(),_onbDismissed=false;
 
+// ── i18n System (Lightweight BG/EN) ──────────────────────
+const I18N_KEY='ads-intel-lang';
+function getLang(){return localStorage.getItem(I18N_KEY)||'bg';}
+function setLang(l){localStorage.setItem(I18N_KEY,l);applyI18n();}
+
+const I18N={
+  // Navigation tabs
+  'nav.dashboard':{bg:'Dashboard',en:'Dashboard'},
+  'nav.copy-lib':{bg:'Креативи',en:'Creatives'},
+  'nav.trends':{bg:'📈 Тренди',en:'📈 Trends'},
+  'nav.calendar':{bg:'📅 Календар',en:'📅 Calendar'},
+  'nav.compare':{bg:'⇄ Сравнение',en:'⇄ Compare'},
+  'nav.history':{bg:'⌛ История',en:'⌛ History'},
+  'nav.alerts':{bg:'Сигнали',en:'Alerts'},
+  'nav.boards':{bg:'База',en:'Database'},
+  'nav.strategy':{bg:'♟ Стратегия',en:'♟ Strategy'},
+  'nav.legends':{bg:'📖 Легенда',en:'📖 Legend'},
+  // Sidebar
+  'sidebar.competitors':{bg:'Конкуренти',en:'Competitors'},
+  'sidebar.market':{bg:'Пазар',en:'Market'},
+  'sidebar.settings':{bg:'Настройки',en:'Settings'},
+  'sidebar.ad-count':{bg:'Брой реклами',en:'Ad count'},
+  'sidebar.status':{bg:'Статус',en:'Status'},
+  'sidebar.filtering':{bg:'Филтриране',en:'Filtering'},
+  'sidebar.my-brand':{bg:'Мой бранд',en:'My brand'},
+  'sidebar.add-brand':{bg:'Добави бранд...',en:'Add brand...'},
+  'sidebar.run':{bg:'⚡ Анализирай',en:'⚡ Analyze'},
+  'sidebar.select-all':{bg:'Всички',en:'All'},
+  'sidebar.select-none':{bg:'Никой',en:'None'},
+  'sidebar.selected-counter':{bg:'избрани',en:'selected'},
+  'sidebar.selected-of':{bg:'от',en:'of'},
+  // Dashboard metrics
+  'metric.active-ads':{bg:'Активни реклами',en:'Active ads'},
+  'metric.brands-with-ads':{bg:'Брандове с реклами',en:'Brands with ads'},
+  'metric.winner':{bg:'Winner (дни активна)',en:'Winner (days active)'},
+  'metric.min-budget':{bg:'Мин. бюджет (€/мес)',en:'Min. budget (€/mo)'},
+  'metric.new-ads':{bg:'Нови (7 дни)',en:'New (7 days)'},
+  'metric.estimated-cost':{bg:'Оценена цена (€)',en:'Estimated cost (€)'},
+  // Buttons
+  'btn.full-analysis':{bg:'↻ Пълен анализ',en:'↻ Full analysis'},
+  'btn.export-report':{bg:'📄 Свали отчет',en:'📄 Export report'},
+  'btn.full-report':{bg:'📊 Пълен отчет',en:'📊 Full report'},
+  'btn.ab-tests':{bg:'🧪 A/B Тестове',en:'🧪 A/B Tests'},
+  // User menu
+  'user.settings':{bg:'Настройки',en:'Settings'},
+  'user.api-keys':{bg:'API ключове',en:'API keys'},
+  'user.course':{bg:'Курс',en:'Course'},
+  'user.theme':{bg:'Превключи тема',en:'Toggle theme'},
+  'user.lang':{bg:'Език (BG/EN)',en:'Language (BG/EN)'},
+  'user.logout':{bg:'Изход',en:'Logout'},
+  // Toasts
+  'toast.partial-en':{bg:'Преводът е частичен — някои текстове остават на български',en:'Translation is partial — some content remains in Bulgarian'},
+};
+
+function t(key){
+  const e=I18N[key];
+  if(!e)return key;
+  return e[getLang()]||e.bg||key;
+}
+
+function applyI18n(){
+  const lang=getLang();
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key=el.getAttribute('data-i18n');
+    el.textContent=t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    el.placeholder=t(el.getAttribute('data-i18n-placeholder'));
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+    el.title=t(el.getAttribute('data-i18n-title'));
+  });
+  // Update toggle button label
+  const tg=document.getElementById('lang-toggle');
+  if(tg)tg.textContent=lang==='bg'?'🌐 EN':'🌐 BG';
+  // Show partial-en banner once if EN selected
+  if(lang==='en'){
+    const seen=sessionStorage.getItem('en-banner-seen');
+    if(!seen&&typeof toast==='function'){toast(t('toast.partial-en'),'info');sessionStorage.setItem('en-banner-seen','1');}
+  }
+}
+
+function toggleLang(){setLang(getLang()==='bg'?'en':'bg');}
+
 function shouldShowOnboarding(){
   if(localStorage.getItem(ONBOARDING_KEY))return false;
   try{
@@ -354,6 +439,14 @@ function renderOnboardingStep(){
         <div class="onb-step-num">Стъпка 1 от 3</div>
         <div class="onb-title">👋 Добре дошъл в Outfox Ads Intelligence</div>
         <div class="onb-subtitle">За да работи приложението, нужни са ти 2 безплатни API ключа. Можеш да ги добавиш сега или по-късно.</div>
+        <div class="onb-course-cta" onclick="onbStartWithCourse()">
+          <div class="onb-course-cta-icon">🎓</div>
+          <div class="onb-course-cta-text">
+            <div class="onb-course-cta-title">Първо разгледай курса (10 мин)</div>
+            <div class="onb-course-cta-sub">15 кратки лекции — какво е приложението и как се ползва. Препоръчително преди първия скан.</div>
+          </div>
+          <div class="onb-course-cta-arrow">→</div>
+        </div>
         <div class="onb-section">
           <div class="onb-input-label">
             <span>Facebook Access Token</span>
@@ -555,6 +648,16 @@ function onbFinishAndCourse(){
 }
 
 function onbFinishOnly(){finishOnboarding();}
+
+function onbStartWithCourse(){
+  const overlay=document.getElementById('onb-overlay');
+  if(overlay){
+    if(overlay._escHandler)document.removeEventListener('keydown',overlay._escHandler);
+    overlay.classList.remove('open');
+    setTimeout(()=>overlay.remove(),300);
+  }
+  setTimeout(()=>{if(typeof openCourseModal==='function')openCourseModal();},350);
+}
 
 function dismissOnboarding(){
   if(!confirm('Сигурен ли си? Onboarding-ът няма да се покаже отново.'))return;
@@ -3094,6 +3197,24 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .dash-summary-icon{font-size:14px;flex-shrink:0;margin-top:1px}
 .dash-summary-refresh{background:none;border:none;color:var(--hint);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;transition:var(--transition);margin-left:auto}
 .dash-summary-refresh:hover{color:var(--amber);background:var(--amber-dim)}
+/* ── Welcome Bonus Battle ───────────────────────────────── */
+.welcome-bonus-card{margin-top:18px}
+.welcome-bonus-controls{display:flex;gap:6px;margin:8px 0 12px;flex-wrap:wrap}
+.welcome-bonus-table{width:100%;border-collapse:collapse;font-size:13px}
+.welcome-bonus-table th{text-align:left;padding:10px 12px;background:var(--surface2);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;border-bottom:1px solid var(--border)}
+.welcome-bonus-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.welcome-bonus-table tr:hover td{background:var(--surface2)}
+.welcome-bonus-table .wb-brand{font-weight:700;color:var(--text)}
+.welcome-bonus-table .wb-amount{font-weight:700;color:var(--amber);font-size:15px}
+.welcome-bonus-table .wb-pct{color:#6ee7b7;font-weight:600}
+.welcome-bonus-table .wb-fs{color:#a78bfa;font-weight:600;font-size:12px}
+.welcome-bonus-table .wb-conf{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px}
+.welcome-bonus-table .wb-conf-h{background:rgba(110,231,183,0.15);color:#6ee7b7;border:1px solid rgba(110,231,183,0.4)}
+.welcome-bonus-table .wb-conf-m{background:rgba(245,166,35,0.15);color:var(--amber);border:1px solid rgba(245,166,35,0.4)}
+.welcome-bonus-table .wb-conf-l{background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.4)}
+.welcome-bonus-table .wb-snippet{font-size:11.5px;color:var(--muted);font-style:italic;line-height:1.5}
+.welcome-bonus-disclaimer{margin-top:10px;font-size:11px;color:var(--muted);font-style:italic;line-height:1.55;padding:8px 10px;background:var(--surface2);border-left:2px solid var(--amber);border-radius:4px}
+.welcome-bonus-empty{padding:30px 20px;text-align:center;color:var(--hint);font-size:13px}
 /* SVG timeline tooltip */
 .timeline-tooltip{position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;color:var(--text);pointer-events:none;z-index:100;display:none;box-shadow:var(--shadow-md);min-width:140px}
 /* ── AI Chat Bubble ──────────────────────────────────────── */
@@ -3969,6 +4090,13 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .onb-skip{background:none;border:0;color:var(--muted);font-size:11.5px;cursor:pointer;text-decoration:underline;font-family:inherit}
 .onb-skip:hover{color:var(--text)}
 .onb-tooltip{position:fixed;background:var(--surface);border:1px solid var(--amber);padding:8px 12px;border-radius:7px;font-size:11.5px;color:var(--text);max-width:280px;z-index:9800;display:none;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,0.5)}
+.onb-course-cta{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(245,166,35,0.12) 0%,rgba(224,133,26,0.06) 100%);border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:14px 16px;margin:12px 0 20px;cursor:pointer;transition:all 0.2s}
+.onb-course-cta:hover{background:linear-gradient(135deg,rgba(245,166,35,0.18) 0%,rgba(224,133,26,0.10) 100%);border-color:var(--amber);transform:translateY(-1px)}
+.onb-course-cta-icon{font-size:28px;flex-shrink:0}
+.onb-course-cta-text{flex:1}
+.onb-course-cta-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
+.onb-course-cta-sub{font-size:12px;color:var(--muted);line-height:1.45}
+.onb-course-cta-arrow{font-size:20px;color:var(--amber);font-weight:700;flex-shrink:0}
 @media (max-width:640px){
   .onb-modal{max-height:95vh;border-radius:14px;max-width:100%}
   .onb-title{font-size:18px}
@@ -3994,12 +4122,13 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
         <div class="user-name" id="user-name-lbl">—</div>
       </div>
       <div class="user-menu" id="user-menu">
-        <div class="user-menu-item" onclick="openSettingsFromMenu()"><span>⚙</span><span>Настройки</span></div>
-        <div class="user-menu-item" onclick="scrollToApiTokens()"><span>🔑</span><span>API ключове</span></div>
-        <div class="user-menu-item" onclick="openCourseFromMenu()"><span>📚</span><span>Курс</span></div>
-        <div class="user-menu-item" onclick="toggleTheme();closeUserMenu()"><span>🌓</span><span>Превключи тема</span></div>
+        <div class="user-menu-item" onclick="openSettingsFromMenu()"><span>⚙</span><span data-i18n="user.settings">Настройки</span></div>
+        <div class="user-menu-item" onclick="scrollToApiTokens()"><span>🔑</span><span data-i18n="user.api-keys">API ключове</span></div>
+        <div class="user-menu-item" onclick="openCourseFromMenu()"><span>📚</span><span data-i18n="user.course">Курс</span></div>
+        <div class="user-menu-item" onclick="toggleTheme();closeUserMenu()"><span>🌓</span><span data-i18n="user.theme">Превключи тема</span></div>
+        <div class="user-menu-item" onclick="toggleLang();closeUserMenu()"><span>🌐</span><span data-i18n="user.lang">Език (BG/EN)</span></div>
         <div class="user-menu-divider"></div>
-        <div class="user-menu-item danger" onclick="doSignOut()"><span>⏏</span><span>Изход</span></div>
+        <div class="user-menu-item danger" onclick="doSignOut()"><span>⏏</span><span data-i18n="user.logout">Изход</span></div>
       </div>
     </div>
   </div>
@@ -4068,7 +4197,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   </div>
 
   <div class="section">
-    <div class="section-label">Пазар</div>
+    <div class="section-label" data-i18n="sidebar.market">Пазар</div>
     <select id="country" onchange="saveSet();filterChipsByCountry()" style="font-size:13px">
       <option value="BG">🇧🇬 България</option>
       <option value="RO">🇷🇴 Румъния</option>
@@ -4078,12 +4207,12 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   </div>
 
   <div class="section">
-    <div class="section-label">Конкуренти</div>
+    <div class="section-label" data-i18n="sidebar.competitors">Конкуренти</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;color:var(--muted)">
-      <span><strong id="chips-counter">0</strong> от <span id="chips-total">0</span> избрани</span>
+      <span><strong id="chips-counter">0</strong> <span data-i18n="sidebar.selected-of">от</span> <span id="chips-total">0</span> <span data-i18n="sidebar.selected-counter">избрани</span></span>
       <div style="display:flex;gap:6px">
-        <button class="btn-tiny" onclick="selectAllChips()" title="Избери всички">Всички</button>
-        <button class="btn-tiny" onclick="deselectAllChips()" title="Размаркирай всички">Никой</button>
+        <button class="btn-tiny" onclick="selectAllChips()" title="Избери всички" data-i18n="sidebar.select-all">Всички</button>
+        <button class="btn-tiny" onclick="deselectAllChips()" title="Размаркирай всички" data-i18n="sidebar.select-none">Никой</button>
       </div>
     </div>
     <div class="chips" id="chips">
@@ -4098,13 +4227,13 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
       <div class="chip" data-q="eurobet" data-country="BG">Eurobet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
     </div>
     <div class="custom-add">
-      <input type="text" id="custom-q" placeholder="Добави бранд..." onkeydown="if(event.key==='Enter')addChip()">
+      <input type="text" id="custom-q" placeholder="Добави бранд..." onkeydown="if(event.key==='Enter')addChip()" data-i18n-placeholder="sidebar.add-brand">
       <button class="btn-sm" onclick="addChip()">+</button>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-label">Мой бранд</div>
+    <div class="section-label" data-i18n="sidebar.my-brand">Мой бранд</div>
     <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:4px">Маркирай твоя бранд със звезда в всички списъци.</div>
     <div class="own-brand-row">
       <input type="text" id="own-brand-inp" placeholder="напр. MyBrand" onkeydown="if(event.key==='Enter')saveOwnBrand()">
@@ -4124,17 +4253,17 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 
 
   <div class="section">
-    <button class="collapsible-toggle" onclick="toggleCol('opt-b','opt-a')"><span id="opt-a">▶</span> Настройки</button>
+    <button class="collapsible-toggle" onclick="toggleCol('opt-b','opt-a')"><span id="opt-a">▶</span> <span data-i18n="sidebar.settings">Настройки</span></button>
     <div class="collapsible-body" id="opt-b">
-      <div class="section-label">Брой реклами</div>
+      <div class="section-label" data-i18n="sidebar.ad-count">Брой реклами</div>
       <select id="limit"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select>
-      <div class="section-label" style="margin-top:5px">Статус</div>
+      <div class="section-label" style="margin-top:5px" data-i18n="sidebar.status">Статус</div>
       <select id="ad-status">
         <option value="ACTIVE">Само активни</option>
         <option value="ALL">Всички</option>
         <option value="INACTIVE">Неактивни</option>
       </select>
-      <div class="section-label" style="margin-top:5px">Филтриране</div>
+      <div class="section-label" style="margin-top:5px" data-i18n="sidebar.filtering">Филтриране</div>
       <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px">
         <input type="checkbox" id="strict-mode" checked onchange="saveSet();applyStrictMode()" style="accent-color:var(--amber);width:15px;height:15px;flex-shrink:0">
         <span><strong>Само официални реклами</strong><br><span style="font-size:13px;color:var(--hint)">Скрива несвързани/shadow страници</span></span>
@@ -4167,7 +4296,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
         Избери конкуренти горе и натисни бутона
       </div>
       <button class="btn-run" id="run-btn" onclick="run()">
-        <span id="run-btn-label">▶ Анализирай</span>
+        <span id="run-btn-label" data-i18n="sidebar.run">⚡ Анализирай</span>
       </button>
     </div>
   </div>
@@ -4175,21 +4304,22 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 
 <main class="main">
   <nav class="nav-tabs">
-    <div class="nav-tab active" id="navtab-dashboard" onclick="switchTab('dashboard')">Dashboard</div>
-    <div class="nav-tab" id="navtab-copy-lib" onclick="switchTab('copy-lib')">Креативи</div>
-    <div class="nav-tab" onclick="switchTab('database')" id="nav-database">База <span id="db-online" style="display:none"><span class="realtime-dot"></span></span></div>
-    <div class="nav-tab" onclick="switchTab('alerts')">Сигнали <span id="nav-alert-badge" style="display:none;background:var(--red);color:#fff;font-size:12px;padding:1px 6px;border-radius:9px;margin-left:4px;font-weight:700">0</span></div>
-    <div class="nav-tab" id="navtab-history" onclick="switchTab('history')">⌛ История</div>
-    <div class="nav-tab" id="navtab-compare" onclick="switchTab('compare')">⇄ Сравнение</div>
-    <div class="nav-tab" id="navtab-trends" onclick="switchTab('trends')">📈 Тренди</div>
-    <div class="nav-tab" id="navtab-calendar" onclick="switchTab('calendar')">📅 Календар</div>
-    <div class="nav-tab" id="navtab-strategy" onclick="switchTab('strategy')">♟ Стратегия</div>
+    <div class="nav-tab active" id="navtab-dashboard" onclick="switchTab('dashboard')" data-i18n="nav.dashboard">Dashboard</div>
+    <div class="nav-tab" id="navtab-copy-lib" onclick="switchTab('copy-lib')" data-i18n="nav.copy-lib">Креативи</div>
+    <div class="nav-tab" onclick="switchTab('database')" id="nav-database" data-i18n="nav.boards">База <span id="db-online" style="display:none"><span class="realtime-dot"></span></span></div>
+    <div class="nav-tab" onclick="switchTab('alerts')" data-i18n="nav.alerts">Сигнали <span id="nav-alert-badge" style="display:none;background:var(--red);color:#fff;font-size:12px;padding:1px 6px;border-radius:9px;margin-left:4px;font-weight:700">0</span></div>
+    <div class="nav-tab" id="navtab-history" onclick="switchTab('history')" data-i18n="nav.history">⌛ История</div>
+    <div class="nav-tab" id="navtab-compare" onclick="switchTab('compare')" data-i18n="nav.compare">⇄ Сравнение</div>
+    <div class="nav-tab" id="navtab-trends" onclick="switchTab('trends')" data-i18n="nav.trends">📈 Тренди</div>
+    <div class="nav-tab" id="navtab-calendar" onclick="switchTab('calendar')" data-i18n="nav.calendar">📅 Календар</div>
+    <div class="nav-tab" id="navtab-strategy" onclick="switchTab('strategy')" data-i18n="nav.strategy">♟ Стратегия</div>
     <button class="nav-search-btn" onclick="openCmdK()" title="Команден панел (⌘K)">⌘K</button>
     <button class="nav-search-btn" onclick="openGSearch()" title="Търси в рекламите (глобално)">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       Търси
     </button>
     <button class="nav-help-btn" onclick="openStrategyDrawer()" title="Стратегия — Kanban" style="font-size:13px;font-weight:600;width:auto;padding:0 10px;border-radius:14px;letter-spacing:0.3px">♟ Стратегия</button>
+    <button id="lang-toggle" class="nav-help-btn" onclick="toggleLang()" title="Превключи език / Toggle language" style="font-size:13px;font-weight:600;width:auto;padding:0 10px;border-radius:14px;letter-spacing:0.3px">🌐 EN</button>
     <button class="nav-help-btn" onclick="openCourseModal()" title="Обучителен курс — 10 интерактивни лекции" style="font-size:13px;font-weight:600;width:auto;padding:0 10px;border-radius:14px;letter-spacing:0.3px">🎓 Курс</button>
     <button class="nav-help-btn" onclick="openLegendModal()" title="Легенда — обяснение на всички символи и индикатори" style="font-size:13px;font-weight:600;width:auto;padding:0 10px;border-radius:14px;letter-spacing:0.3px">📖 Легенда</button>
     <button class="theme-toggle-btn nav-help-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Превключи тема" style="font-size:13px;font-weight:600;width:auto;padding:0 10px;border-radius:14px;letter-spacing:0.3px">☀ Светла</button>
@@ -4260,7 +4390,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
           <p style="margin:0">Ако Efbet има 43, Betano 12, Winbet 7 → показва 62.</p>
         </div>
         <div class="metric-val" id="m1">—</div>
-        <div class="metric-label">Активни реклами</div>
+        <div class="metric-label" data-i18n="metric.active-ads">Активни реклами</div>
       </div>
       <div class="metric">
         <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
@@ -4273,7 +4403,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
           <p style="margin:0">Избра 5 бранда, 3 имат реклами → показва 3.</p>
         </div>
         <div class="metric-val" id="m2">—</div>
-        <div class="metric-label">Брандове с реклами</div>
+        <div class="metric-label" data-i18n="metric.brands-with-ads">Брандове с реклами</div>
       </div>
       <div class="metric">
         <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
@@ -4286,7 +4416,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
           <p style="margin:0">Ако реклама е стартирана преди 47 дни и още е активна → 47д. ⚠ Дълга активност означава, че бранда я счита за работеща.</p>
         </div>
         <div class="metric-val" id="m3">—</div>
-        <div class="metric-label">Winner (дни активна)</div>
+        <div class="metric-label" data-i18n="metric.winner">Winner (дни активна)</div>
       </div>
       <div class="metric">
         <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
@@ -4299,7 +4429,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
           <p style="margin:0">30 реклами с lower_bound по €100 → €3000/мес. ⚠ Това е МИНИМУМ. Реалният бюджет често е 2-5x повече.</p>
         </div>
         <div class="metric-val" id="m4">—</div>
-        <div class="metric-label">Мин. бюджет (€/мес)</div>
+        <div class="metric-label" data-i18n="metric.min-budget">Мин. бюджет (€/мес)</div>
       </div>
       <div class="metric">
         <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
@@ -4312,7 +4442,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
           <p style="margin:0">12 реклами стартирали тази седмица → 12.</p>
         </div>
         <div class="metric-val" id="m5">—</div>
-        <div class="metric-label">Нови (7 дни)</div>
+        <div class="metric-label" data-i18n="metric.new-ads">Нови (7 дни)</div>
       </div>
       <div class="metric">
         <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
@@ -4325,7 +4455,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
           <p style="margin:0">5M impressions × €2.25 / 1000 = €11,250. ⚠ Оценка с широка грешка (±40%). За ориентир, не точна стойност.</p>
         </div>
         <div class="metric-val" id="m6">—</div>
-        <div class="metric-label">Оценена цена (€)</div>
+        <div class="metric-label" data-i18n="metric.estimated-cost">Оценена цена (€)</div>
       </div>
     </div>
 
@@ -5006,6 +5136,8 @@ window.onload=()=>{
     checkScanReminder();
     checkFirstVisit();
     if(typeof maybeShowOnboarding==='function')maybeShowOnboarding();
+    // Apply i18n translations
+    if(typeof applyI18n==='function')applyI18n();
   }catch(e){
     console.error('[init] fatal init error:',e);
     toast('Грешка при стартиране — провери конзолата','error');
@@ -6654,6 +6786,19 @@ function renderDash(res){
       </div>
       <div class="dash-summary-card" id="dash-summary-host"></div>
     </div>
+    <div class="card welcome-bonus-card" id="welcome-bonus-card" style="display:none">
+      <div class="card-hdr">
+        <div class="card-title">💰 Welcome Bonus Battle</div>
+        <div class="card-sub">Извлечени welcome оферти от рекламните текстове · сравнение по брандове</div>
+      </div>
+      <div class="welcome-bonus-controls">
+        <button class="btn-tiny" onclick="sortBonusTable('value')">Сортирай по стойност</button>
+        <button class="btn-tiny" onclick="sortBonusTable('brand')">По бранд</button>
+        <button class="btn-tiny" onclick="sortBonusTable('confidence')">По увереност</button>
+      </div>
+      <div id="welcome-bonus-table-host"></div>
+      <div class="welcome-bonus-disclaimer">⚠ Извлечените стойности са от рекламните текстове в Meta Ad Library. За точни условия (wager, минимален депозит, срок) провери официалния сайт на бранда.</div>
+    </div>
     <div id="benchmarks-panel-mount"></div>`;
   // Build charts (called after html is written to dash-content below)
   // v2Top injected at line 1860 together with brand cards html
@@ -6715,6 +6860,7 @@ function renderDash(res){
   buildTimelineChart();
   buildBrandBattle(res);
   buildAISummaryCard(res);
+  if(typeof renderWelcomeBonusTable==='function')renderWelcomeBonusTable();
   renderBenchmarksPanel();
   // Inject filter presets bar
   if(typeof injectPresetBar==='function')setTimeout(injectPresetBar,50);
@@ -12527,6 +12673,135 @@ function buildAISummaryCard(res){
     </div>
     ${items.map(it=>`<div class="dash-summary-item"><span class="dash-summary-icon" style="color:${it.color}">${it.icon}</span><span>${it.text}</span></div>`).join('')}`;
 }
+
+// ── Welcome Bonus Battle ──────────────────────────────────────────────
+function extractWelcomeBonus(copy){
+  if(!copy||typeof copy!=='string')return null;
+  const result={
+    amountEUR:null,
+    amountCurrency:null,
+    percentMatch:null,
+    freeSpins:null,
+    minDeposit:null,
+    wagerMultiplier:null,
+    rawSnippet:'',
+    confidence:'low'
+  };
+
+  const euro=copy.match(/(?:до\s+)?(\d{2,5})\s?(?:€|EUR|евро)/i);
+  const bgn=copy.match(/(?:до\s+)?(\d{2,5})\s?(?:лв|BGN|лева)/i);
+  if(euro){result.amountEUR=parseInt(euro[1]);result.amountCurrency='EUR';}
+  else if(bgn){result.amountEUR=Math.round(parseInt(bgn[1])/1.96);result.amountCurrency='BGN';}
+
+  const pct=copy.match(/(\d{2,4})\s*%\s*(?:бонус|match|deposit|депозит)/i);
+  if(pct)result.percentMatch=parseInt(pct[1]);
+
+  const fs=copy.match(/(\d{1,4})\s*(?:безплатн[иа]\s*завъртани[яе]|free\s*spins?|fs|спина|спинов[еа])/i);
+  if(fs)result.freeSpins=parseInt(fs[1]);
+
+  const md=copy.match(/мин(?:имален)?\.?\s*депозит\s*(?:от\s*)?(\d{1,4})|min\.?\s*deposit\s*(\d{1,4})/i);
+  if(md)result.minDeposit=parseInt(md[1]||md[2]);
+
+  const wg=copy.match(/(?:wager|оборот|изиграване)?\s*(\d{1,3})\s*[xх×](?!\d)/i);
+  if(wg)result.wagerMultiplier=parseInt(wg[1]);
+
+  let signals=0;
+  if(result.amountEUR)signals+=2;
+  if(result.percentMatch)signals+=2;
+  if(result.freeSpins)signals++;
+  if(result.minDeposit)signals++;
+  if(result.wagerMultiplier)signals++;
+  if(/welcome|регистрац|нов\s+(?:играч|клиент|потребител)|join|sign\s*up/i.test(copy))signals+=2;
+  result.confidence=signals>=4?'high':signals>=2?'medium':'low';
+
+  if(signals===0)return null;
+
+  result.rawSnippet=copy.substring(0,200).replace(/\s+/g,' ').trim();
+  return result;
+}
+
+function renderWelcomeBonusTable(){
+  const card=document.getElementById('welcome-bonus-card');
+  const host=document.getElementById('welcome-bonus-table-host');
+  if(!card||!host)return;
+
+  const results=window.results||[];
+  if(!results.length){card.style.display='none';return;}
+
+  const rows=[];
+  results.forEach(r=>{
+    const candidates=(r.copies||[])
+      .map(c=>({bonus:extractWelcomeBonus(c.copy||''),copy:c.copy,date:c.date}))
+      .filter(x=>x.bonus);
+    if(!candidates.length)return;
+    candidates.sort((a,b)=>{
+      const cw={high:3,medium:2,low:1};
+      if(cw[b.bonus.confidence]!==cw[a.bonus.confidence])return cw[b.bonus.confidence]-cw[a.bonus.confidence];
+      const aV=(a.bonus.amountEUR||0)+(a.bonus.percentMatch||0)*5+(a.bonus.freeSpins||0);
+      const bV=(b.bonus.amountEUR||0)+(b.bonus.percentMatch||0)*5+(b.bonus.freeSpins||0);
+      return bV-aV;
+    });
+    const best=candidates[0];
+    rows.push({brand:r.name,...best.bonus,snippet:best.bonus.rawSnippet});
+  });
+
+  if(!rows.length){
+    host.innerHTML='<div class="welcome-bonus-empty">Не са открити welcome бонуси в текущите рекламни текстове.</div>';
+    card.style.display='block';
+    return;
+  }
+
+  window._bonusRows=rows;
+  sortBonusTable('value');
+  card.style.display='block';
+}
+
+function sortBonusTable(by){
+  const rows=(window._bonusRows||[]).slice();
+  if(by==='brand')rows.sort((a,b)=>a.brand.localeCompare(b.brand,'bg'));
+  else if(by==='confidence'){const cw={high:3,medium:2,low:1};rows.sort((a,b)=>cw[b.confidence]-cw[a.confidence]);}
+  else rows.sort((a,b)=>{
+    const aV=(a.amountEUR||0)+(a.percentMatch||0)*5+(a.freeSpins||0);
+    const bV=(b.amountEUR||0)+(b.percentMatch||0)*5+(b.freeSpins||0);
+    return bV-aV;
+  });
+
+  const host=document.getElementById('welcome-bonus-table-host');
+  if(!host)return;
+  const cb={high:'wb-conf-h',medium:'wb-conf-m',low:'wb-conf-l'};
+  const cl={high:'Висока',medium:'Средна',low:'Ниска'};
+
+  host.innerHTML=`
+    <div style="overflow-x:auto">
+    <table class="welcome-bonus-table">
+      <thead>
+        <tr>
+          <th>Бранд</th>
+          <th>Бонус сума</th>
+          <th>Match %</th>
+          <th>Free spins</th>
+          <th>Мин. депозит</th>
+          <th>Wager</th>
+          <th>Увереност</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r=>`
+          <tr>
+            <td class="wb-brand">${(r.brand||'').replace(/[<>]/g,'')}<div class="wb-snippet">${(r.snippet||'').substring(0,140).replace(/[<>]/g,'')}…</div></td>
+            <td class="wb-amount">${r.amountEUR?'€'+r.amountEUR:'—'}${r.amountCurrency==='BGN'?' <span style="font-size:10px;color:var(--muted)">(BGN)</span>':''}</td>
+            <td class="wb-pct">${r.percentMatch?r.percentMatch+'%':'—'}</td>
+            <td class="wb-fs">${r.freeSpins?r.freeSpins+' FS':'—'}</td>
+            <td>${r.minDeposit?'€'+r.minDeposit:'—'}</td>
+            <td>${r.wagerMultiplier?r.wagerMultiplier+'x':'—'}</td>
+            <td><span class="wb-conf ${cb[r.confidence]}">${cl[r.confidence]}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    </div>`;
+}
+
 // ── AI Chat Bubble ────────────────────────────────────────────────────
 const CHAT_HIST_KEY='ads-intel-chat-hist';
 
@@ -13001,6 +13276,7 @@ function buildCmdkItems(query){
   const actions=[
     {id:'analyze',label:'▶ Анализирай',sub:'Стартирай скан',keywords:'run scan analyze анализ',action:()=>{const b=document.getElementById('run-btn')||document.querySelector('[onclick*="run()"]');if(b&&!b.disabled)b.click();}},
     {id:'save-scan',label:'💾 Запази скан',sub:'Запази текущия скан в история',keywords:'save scan запази',action:()=>{const b=document.getElementById('btn-save');if(b)b.click();}},
+    {id:'welcome-bonus',label:'💰 Welcome Bonus Battle',sub:'Скрол до сравнение на бонуси',keywords:'bonus welcome бонус',action:()=>{document.getElementById('welcome-bonus-card')?.scrollIntoView({behavior:'smooth',block:'start'});}},
     {id:'export',label:'⬇ Експорт',sub:'Свали отчет',keywords:'export download свали отчет',action:()=>{const b=document.getElementById('btn-export');if(b)b.click();}},
     {id:'full-report',label:'📊 Пълен отчет',sub:'Печатаем HTML/PDF отчет на цялата сесия',keywords:'report отчет full pdf print',action:()=>{if(typeof openFullReportModal==='function')openFullReportModal();}},
     {id:'ai-analyze',label:'✨ AI Анализ',sub:'Пълен Claude анализ',keywords:'ai claude analyze анализ',action:()=>{if(typeof runAI==='function'&&window.results)runAI(window.results,document.getElementById('claude-token').value.trim());}},
