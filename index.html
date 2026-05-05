@@ -60,7 +60,7 @@ const HELP_CONTENT={
           '<strong>🧪 A/B Variant Inspector:</strong> Показва всички детектирани A/B клъстери от текущия скан — страничен изглед с два варианта едновременно и word-level diff highlighting за да видиш точно какво се тества.',
           '<strong>🔍 Търси shadow:</strong> Стартира Shadow Discovery — намира скрити страници с подобни hooks',
           '<strong>📄 Свали отчет ▾:</strong> HTML / Markdown / PDF / Top Creatives CSV',
-          '<strong>💾 Запази скан:</strong> Архивира за сравнение + AI history',
+          '<strong>💾 Auto-save:</strong> Всеки скан се запазва автоматично в историята с дедупликация (1 скан на 10 минути) за сравнение и AI анализ',
           '<strong>Focus:</strong> Скрива всичко освен winner + нови реклами',
           '<strong>⏰ Автосканиране:</strong> Настроишься интервала в API Tokens → Автоматичен скан (6ч/12ч/24ч/48ч) и активирай за фоново мониториране без да отваряш приложението',
           '<strong>Сортирай:</strong> Dropdown в brand filter row подрежда картите по брой реклами, нови (7д), est. spend, winner longevity или азбучно — запазва се в localStorage',
@@ -117,7 +117,7 @@ const HELP_CONTENT={
     sections:[
       {
         title:'Принцип на работа',
-        body:'Всеки <strong>"Запази скан"</strong> добавя snapshot в localStorage <code>ads-intel-hist</code> (newest-first). Auto-save се случва след всеки успешен анализ. При load се прилага retention policy (>90 дни се чистят).'
+        body:'Всеки успешен анализ автоматично добавя snapshot в localStorage <code>ads-intel-hist</code> (newest-first). Smart deduplication: ако два скана имат идентични брандове и количество реклами в интервал от 10 минути, вторият се пропуска. История съхранява до 30 скана; при load се прилага retention policy (>90 дни се чистят).'
       },
       {
         title:'Действия',
@@ -472,9 +472,10 @@ function toggleOnbBrand(brand){
 function addOnbCustomBrand(){
   const input=document.getElementById('onb-custom-brand');
   const v=input?.value?.trim();
-  if(!v)return;
+  if(!v){toast('Въведи име на бранд','warning');return;}
   _onbSelectedBrands.add(v);
   input.value='';
+  toast('Брандът е добавен','success');
   renderOnboardingStep();
 }
 
@@ -4186,7 +4187,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
         </div>
         <button class="btn-action" id="btn-full-report" style="display:none" onclick="openFullReportModal()" title="Печат-готов отчет с всички брандове, реклами и benchmarks">📊 Пълен отчет</button>
         <button class="abv-trigger-btn" id="btn-abv" style="display:none" onclick="openAbvInspector()" title="Преглед на всички детектирани A/B тестове">🧪 A/B Тестове</button>
-        <button class="btn-action" id="btn-save" style="display:none" onclick="saveScan()" title="Запазва текущия скан в историята за сравнение по-късно">💾 Запази скан</button>
+        <button class="btn-action" id="btn-save" style="display:none !important" onclick="saveScan()" title="Запазва текущия скан в историята за сравнение по-късно">💾 Запази скан</button>
         <button class="btn-action" id="btn-focus" style="display:none" onclick="toggleFocusMode()" title="Показва само winning + нови реклами">Focus</button>
       </div>
     </div>
@@ -4395,7 +4396,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
         <button class="btn-action" style="color:var(--red);border-color:var(--red)" onclick="clearHist()">Изчисти</button>
       </div>
     </div>
-    <div id="history-list"><div class="empty"><div class="empty-icon">🕐</div><p>Няма запазени сканирания</p><small>Натисни "Запази скан" след анализ</small></div></div>
+    <div id="history-list"><div class="empty"><div class="empty-icon">🕐</div><p>Няма запазени сканирания</p><small>Сканирането ще се запази автоматично след анализ</small></div></div>
   </div>
 
   <div class="tab-content" id="tab-compare">
@@ -4933,21 +4934,21 @@ function applyRemovedChips(){
 }
 
 function addChip(){
-  const i=document.getElementById('custom-q'),v=i.value.trim();if(!v)return;
+  const i=document.getElementById('custom-q'),v=i.value.trim();if(!v){toast('Въведи име на бранд','warning');return;}
   const q=v.toLowerCase();
   // If user re-adds a previously removed chip, un-remove it
   const removed=getRemovedChips().filter(r=>r!==q);
   setRemovedChips(removed);
   // Skip if already exists
   const existing=document.querySelector(`#chips .chip[data-q="${CSS.escape(q)}"]`);
-  if(existing){existing.classList.add('active');i.value='';updateRunSummary();renderAliasSection();return;}
+  if(existing){existing.classList.add('active');i.value='';updateRunSummary();renderAliasSection();toast('Брандът е добавен','success');return;}
   const c=document.createElement('div');
   c.className='chip active';
   c.dataset.q=q;
   c.innerHTML=`${v.replace(/[<>]/g,'')}<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button>`;
   c.onclick=()=>{c.classList.toggle('active');updateRunSummary();renderAliasSection();};
   document.getElementById('chips').appendChild(c);
-  i.value='';updateRunSummary();renderAliasSection();
+  i.value='';updateRunSummary();renderAliasSection();toast('Брандът е добавен','success');
 }
 
 // ── Shadow Tracker ──────────────────────────────────────────────
@@ -7126,13 +7127,13 @@ function saveScan(){
   const h=getH();
   const meta=getCurrentUserMeta();
   const scan={id:Date.now(),ts:new Date().toISOString(),brands:results.map(r=>r.name),author:meta.author,email:meta.email,results:results.map(r=>({name:r.name,count:r.count,copies:r.copies||[],ps:r.ps||{},st:r.st,it:r.it,new7:r.new7||0,wd:r.wd,pages:r.pages||[],shadowCount:r.shadowCount||0,splits:r.splits||[]}))};
-  h.unshift(scan);setH(h.slice(0,20));
+  h.unshift(scan);setH(h.slice(0,30));
   toast('Сканът е запазен','success');renderHist();
 }
 function clearHist(){if(!confirm('Изтрий цялата история?'))return;localStorage.removeItem('ads-intel-hist');selScans=[];renderHist();renderCmpSel();}
 function renderHist(){
   const h=getH(),el=document.getElementById('history-list');
-  if(!h.length){el.innerHTML='<div class="empty"><div class="empty-icon">🕐</div><p>Няма запазени сканирания</p><small>Натисни "Запази скан" след анализ</small></div>';return;}
+  if(!h.length){el.innerHTML='<div class="empty"><div class="empty-icon">🕐</div><p>Няма запазени сканирания</p><small>Сканирането ще се запази автоматично след анализ</small></div>';return;}
   el.innerHTML=h.map(s=>{
     const d=new Date(s.ts);
     const ds=d.toLocaleDateString('bg-BG',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('bg-BG',{hour:'2-digit',minute:'2-digit'});
@@ -7198,7 +7199,7 @@ function renderCmpSel(){
   const h=getH(),el=document.getElementById('compare-scans');
   if(!el)return;
   if(!h.length){
-    el.innerHTML='<div class="empty" style="padding:30px"><div class="empty-icon">📅</div><p>Няма запазени сканирания</p><small>Стартирай анализ от Dashboard и натисни "Запази скан"</small></div>';
+    el.innerHTML='<div class="empty" style="padding:30px"><div class="empty-icon">📅</div><p>Няма запазени сканирания</p><small>Сканирането ще се запази автоматично след анализ</small></div>';
     updCmpBar();return;
   }
   el.innerHTML=h.map((s,i)=>{
@@ -7663,6 +7664,9 @@ function openPlaybookModal(brandName,bodyHTML){
 function renderPlaybookContent(snap,htmlContent){
   const body=document.getElementById('playbook-body');
   if(!body)return;
+  const disclaimer=`<div style="margin-top:18px;padding:12px 14px;background:#f5f5f5;border-left:3px solid #f5a623;border-radius:6px;font-size:12px;color:#666;line-height:1.55">
+    ⚠ <strong>Playbook-ът е насочващ</strong> — не заменя експертна преценка. Обемът на реклами не е индикатор за реална пазарна сила. Финалните решения вземай след крос-проверка с реални пазарни данни (GGR, депозити, ретеншън).
+  </div>`;
   body.innerHTML=`
     <h1 style="margin:0 0 4px">${snap.brand}</h1>
     <p style="margin:0 0 18px;color:var(--muted);font-size:12.5px">Стратегически playbook · базиран на ${snap.totalAds} реклами · ${new Date().toLocaleDateString('bg-BG',{day:'2-digit',month:'long',year:'numeric'})}</p>
@@ -7673,6 +7677,7 @@ function renderPlaybookContent(snap,htmlContent){
       <div class="playbook-meta-card"><div class="playbook-meta-val">${snap.avgDaysActive}д</div><div class="playbook-meta-label">Средно активни</div></div>
     </div>
     ${htmlContent}
+    ${disclaimer}
     <div style="margin-top:24px;padding-top:14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);text-align:center">Генериран от Outfox Ads Intelligence · ${new Date().toISOString()}</div>`;
 }
 
@@ -8015,10 +8020,13 @@ h3{font-size:14px;color:#444;margin-top:16px}
   if(typeof toast==='function')toast('Отчет свален като HTML','success');
 }
 
-async function runAI(res,token){
+async function runAI(res,token,opts){
+  opts=opts||{};
   const panel=document.getElementById('ai-panel');
   const aiBody=document.getElementById('ai-body');
   panel.style.display='block';
+  // Auto-scroll to AI panel when triggered
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
   aiBody.innerHTML=`<div class="ai-loading">
     <div class="spinner"></div>
     <div>
@@ -8028,6 +8036,11 @@ async function runAI(res,token){
   </div>`;
 
   try{
+    // Toast on start of full analysis
+    if(opts.full&&typeof toast==='function'){
+      toast('🧠 Claude Opus 4.7 започна пълен анализ — ~30 сек','info');
+    }
+
     let text='';
     if(BACKEND_URL){
       text=await analyzeViaBackend(res);
@@ -8095,7 +8108,28 @@ async function runAI(res,token){
 
 ${JSON.stringify(sum,null,2)}
 
-КОНТЕКСТ: Клиентът е активен играч на БГ iGaming пазара и търси конкретни действия за следващите 7 дни. Целта е по-добра конверсия и оптимизация на рекламните кампании спрямо конкурентите.
+═════════════════════════════════════════════════════════════════
+КРИТИЧНО ПРАВИЛО — ОБЕМЪТ НА РЕКЛАМИ НЕ Е ИНДИКАТОР ЗА УСПЕХ
+═════════════════════════════════════════════════════════════════
+ВНИМАНИЕ: Брой реклами (обем) НЕ корелира с реална пазарна сила, конверсии или ROI. Бранд със 5 реклами може да е много по-успешен от бранд с 50.
+
+АНАЛИЗИРАЙ ВМЕСТО ТОВА:
+- КАЧЕСТВО на посланията (clarity, emotional pull, уникален USP)
+- СТРАТЕГИЯ на офертите (стойност на бонусите, retention vs acquisition механики)
+- ПОЗИЦИОНИРАНЕ (премиум vs mastige vs агресивен/discount)
+- ТАРГЕТИРАНЕ (демографски сигнали в copy, языков стил, емоционална апел)
+
+ЗАБОРАВЕНО: "X е лидер защото има повече реклами" или "Y е изоставен защото има малко"
+ПРАВИЛНО: Обемът може да означава — интензивно тестване, сегментация, разпределение на бюджет между множество аудитории, или просто разлики в стратегия — НЕ успех.
+
+═════════════════════════════════════════════════════════════════
+
+КОНТЕКСТ: БГ IGAMING ПАЗАР (хазартни оператори)
+- Ключови фактори за успех: Welcome bonus стойност и условия (wager, мин. депозит, free spins)
+- Регулаторни ограничения (БГ лиценз, "играй отговорно" disclaimer)
+- Brand доверие (възраст, репутация, регулаторен статус)
+- Retention механики (VIP программи, cashback, lottery, birthday bonus)
+Коментирай ПОЗИЦИОНИРАНЕ и ТАКТИКА, не обем на реклами.
 
 ПРАВИЛА (ЗАДЪЛЖИТЕЛНИ):
 - Всяка препоръка започва с ACTION глагол: "Пусни", "Удари", "Контрирай", "Тествай", "Копирай", "Спри"
@@ -8106,31 +8140,38 @@ ${JSON.stringify(sum,null,2)}
 - Ако данните са непълни за дадена секция — кажи го директно и не измисляй
 - Ако има историческа база — обяснявай ТРЕНДА, не само моментното
 
-ФОРМАТ (БЪЛГАРСКИ, markdown bold за заглавия):
+ФОРМАТ (БЪЛГАРСКИ, markdown bold за заглавия, всяка секция с "Увереност: X"):
 
-**1. Share of Voice анализ**
-Кой владее пространството, с колко реклами и какъв % от market share. Кой е в retreat (намалил активност). 1 конкретно действие за contest на лидера.
+**1. Executive Snapshot**
+3-4 изречения кой е водещ позиционно (не по обем), какви нови сигнали виждаме, общо настроение на пазара.
 
-**2. Winning Creative Formula**
-Топ 3 hook pattern-а от данните (с реален пример от copy). Какъв emotional trigger работи. 1 готов counter-hook текст (дословен, ready-to-use).
+**2. Топ хукове и послания**
+Кои текстови патърни и емоционални апели доминират в конкурентската реклама? Дай конкретни примери (цитирай дословно от copy-тата). За всеки hook — обясни защо работи (психологическия механизъм). Включи реални цитати.
 
-**3. Platform & Budget Intelligence**
-Каква е реалната платформена стратегия на всеки конкурент. Къде има gap (underserved платформа). Конкретен бюджет split % за следващата седмица.
+**3. Топ визуални подходи**
+Кои визуални стилове доминират? (statement/lifestyle/product-focused/urgency/social-proof). Кой бранд използва кой подход? Какъв е тренда визуално?
 
-**4. Offer Intelligence**
-Какви точно оферти пускат (€, %, freespins, фрийбет). Кой има най-агресивна оферта. Конкретна counter-оферта с число.
+**4. Оферти стратегия**
+Какви точно бонуси/механики ползват (€, %, freespins, фрийбет, deposit match)? Кой е агресивно агресивен, кой е консервативен? Какви са условията на основните оферти? БЕЗ съждение кое е "по-добро".
 
-**5. Timing & Launch Intelligence**
-Кой ден пускат нови реклами (от DOW данните). Кога има "тихо" пространство. Точен timing за следващото пускане.
+**5. Тренди за яхване**
+Какви нови тенденции (форматни, тематични, сезонни) се появяват сега в индустрията според данните? Струва ли си да ги копираш? Ако няма ясни тренди — кажи го директно.
 
-**6. Creative Fatigue & Testing**
-Кой бранд има изморен инвентар (висок fatigue). Кой тества агресивно (split tests). 1 конкретна creative direction за тестване.
+**6. Препоръки за ефективност**
+4-6 actionable стъпки (не "направи по-добре" — конкретни тестови хипотези):
+→ Тест на [конкретен хук]
+→ Тест на [конкретна оферта структура]
+→ Тест на [платформа/демография/време на пускане]
+→ [други конкретни действия]
 
-**7. 72-часов Action Plan**
-Точно 5 действия, всяко с: Действие / Платформа / Бюджет / Краен срок
-Формат: "→ [Действие]: [детайл] | [Платформа] | €[бюджет] | [кога]"
+**7. Слепи петна**
+Какво НЕ можем да видим само от Ads Library? (landing page experience, post-click conversion flow, retargeting, email follow-up, LTV фактори). Защо изводите са НАСОЧВАЩИ, не финални? Какви други данни биха ни помогнали да преценим по-точно?
 
-Бъди prescriptive и директен. Ако нещо е ясен winner от данните — кажи го без резерви.`;
+УВЕРЕНОСТ по секции:
+- За всяка секция добавяй на края: "Увереност: висока/средна/ниска" базирано на количеството данни
+- Ако имаш под 10 реклами от даден бранд — не правиш категорични изводи за него
+
+Бъди prescriptive и директен. Ако нещо е ясна разлика от данните (КАЧЕСТВО, тактика) — кажи го без резерви.`;
 
     // ── Streaming с SSE ──────────────────────────────────────────────────
     const lbl=document.getElementById('ai-progress-lbl');
@@ -8164,8 +8205,8 @@ ${JSON.stringify(sum,null,2)}
     const decoder=new TextDecoder();
     let buf='';
 
-    // показваме streaming placeholder
-    aiBody.innerHTML=`<div class="ai-loading" id="ai-stream-loading"><div class="spinner"></div><div><div style="font-size:14px;color:var(--text);font-weight:500">Claude Opus 4.7 пише анализа…</div><div style="font-size:12px;color:var(--hint);margin-top:2px" id="ai-stream-lbl">Обработва данните</div><div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">Резултатът ще се покаже наведнъж когато анализът приключи</div></div></div><div id="ai-stream-out" style="display:none"></div>`;
+    // показваме streaming placeholder с по-добра визуализация
+    aiBody.innerHTML=`<div class="ai-loading" id="ai-stream-loading"><div class="spinner"></div><div><div style="font-size:14px;color:var(--text);font-weight:500">Claude Opus 4.7 пише анализа…</div><div style="font-size:12px;color:var(--hint);margin-top:2px" id="ai-stream-lbl">1/7: Чете рекламите…</div><div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">Прогноза: ~30 секунди | Резултатът ще се покаже наведнъж когато анализът приключи</div></div></div><div id="ai-stream-out" style="display:none"></div>`;
 
     const streamOut=document.getElementById('ai-stream-out');
     const streamLbl=document.getElementById('ai-stream-lbl');
@@ -8187,10 +8228,22 @@ ${JSON.stringify(sum,null,2)}
             streamText+=ev.delta.text;
             chunkCount++;
             // НЕ показваме raw текст — само обновяваме прогрес лейбъла за да знае потребителя че работи
-            if(streamText.length>100&&streamLbl){
-              const sections=['Share of Voice','Winning Creative','Platform','Offer Intelligence','Timing','Creative Fatigue','Action Plan'];
-              const current=sections.find(s=>streamText.includes(s))||'Пише';
-              if(streamLbl)streamLbl.textContent=current+'… ('+Math.round(streamText.length/100)*100+' символа)';
+            if(streamText.length>50&&streamLbl){
+              const sections=[
+                {name:'Executive Snapshot',step:1},
+                {name:'Топ хукове',step:2},
+                {name:'Топ визуални',step:3},
+                {name:'Оферти стратегия',step:4},
+                {name:'Тренди',step:5},
+                {name:'Препоръки',step:6},
+                {name:'Слепи петна',step:7}
+              ];
+              let currentStep=1;
+              for(const s of sections){
+                if(streamText.includes(s.name)){currentStep=Math.max(currentStep,s.step);}
+              }
+              const desc=sections.find(s=>s.step===currentStep)?.name||'Обработва';
+              if(streamLbl)streamLbl.textContent=`${currentStep}/7: ${desc}…`;
             }
           }
           // при грешка от stream
@@ -8199,8 +8252,12 @@ ${JSON.stringify(sum,null,2)}
       }
     }
 
-    // финално рендиране с parseAI
-    aiBody.innerHTML=parseAI(streamText);
+    // финално рендиране с parseAI + disclaimer
+    const parsedAI=parseAI(streamText);
+    const disclaimer=`<div style="margin-top:18px;padding:12px 14px;background:var(--surface2);border-left:3px solid var(--amber);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.55">
+      ⚠ <strong>AI анализът е насочващ</strong> — не заменя експертна преценка. Обемът на реклами не е индикатор за реална пазарна сила. Финалните решения вземай след крос-проверка с реални пазарни данни (GGR, депозити, ретеншън).
+    </div>`;
+    aiBody.innerHTML=parsedAI+disclaimer;
 
     // ── Запазваме анализа в история ──────────────────────────────
     if(streamText.length>200){
@@ -8978,14 +9035,35 @@ function setupRealtime(){
 function autoSaveScan(){
   if(!results.length)return;
   const h=getH();
+
+  // Compute stable hash for deduplication
+  const sortedBrands=results.map(r=>r.name).sort().join('|');
+  const totalAdCount=results.reduce((s,r)=>s+(r.count||0),0);
+  const topBrandSignature=(results[0]?.name||'')+':'+(results[0]?.count||0);
+  const scanHash=btoa(sortedBrands+totalAdCount+topBrandSignature).substring(0,16);
+
+  // Check last scan: skip if same hash AND within 10 minutes
   const last=h[0];
-  if(last&&(Date.now()-new Date(last.ts).getTime())<60000){
-    const sameBrands=last.brands.length===results.length&&last.brands.every((b,i)=>b===results[i]?.name);
-    if(sameBrands){h.shift();}
+  if(last){
+    const timeDiff=Date.now()-new Date(last.ts).getTime();
+    if(timeDiff<600000){ // 10 min
+      const lastBrands=last.brands.sort().join('|');
+      const lastTotal=last.results.reduce((s,r)=>s+(r.count||0),0);
+      const lastSig=(last.results[0]?.name||'')+(last.results[0]?.count||0);
+      const lastHash=btoa(lastBrands+lastTotal+lastSig).substring(0,16);
+      if(scanHash===lastHash){
+        return; // Skip save - duplicate within 10min
+      }
+    }
   }
+
   const meta=getCurrentUserMeta();
-  const scan={id:Date.now(),ts:new Date().toISOString(),brands:results.map(r=>r.name),author:meta.author,email:meta.email,results:results.map(r=>({name:r.name,count:r.count,copies:r.copies.slice(0,5),ps:r.ps,st:r.st,new7:r.new7,wd:r.wd}))};
-  h.unshift(scan);setH(h.slice(0,20));
+  const scan={id:Date.now(),ts:new Date().toISOString(),brands:results.map(r=>r.name),author:meta.author,email:meta.email,results:results.map(r=>({name:r.name,count:r.count,copies:r.copies||[],ps:r.ps||{},st:r.st,it:r.it,new7:r.new7||0,wd:r.wd,pages:r.pages||[],shadowCount:r.shadowCount||0,splits:r.splits||[]}))};
+  h.unshift(scan);setH(h.slice(0,30));
+
+  // Show subtle toast
+  try{if(typeof toast==='function')toast('Скан запазен автоматично','info');}catch(_){}
+
   // Save to Supabase asynchronously (non-blocking)
   if(sbClient&&currentUser){
     saveToHistory(scan).catch(e=>console.warn('[sb] saveToHistory:',e));
@@ -11904,7 +11982,7 @@ function doCompare3(){
 
 function renderHist(){
   const h=getH(),el=document.getElementById('history-list');
-  if(!h.length){el.innerHTML='<div class="empty"><div class="empty-icon">🕐</div><p>Няма запазени сканирания</p><small>Натисни "Запази скан" след анализ</small></div>';return;}
+  if(!h.length){el.innerHTML='<div class="empty"><div class="empty-icon">🕐</div><p>Няма запазени сканирания</p><small>Сканирането ще се запази автоматично след анализ</small></div>';return;}
   const digest=buildChangeDigest();
   el.innerHTML=digest+h.map(s=>{
     const d=new Date(s.ts);
@@ -12053,7 +12131,7 @@ function buildTimelineChart(){
   if(!el)return;
 
   if(!hist||hist.length<2){
-    el.innerHTML=`<div style="text-align:center;padding:32px;color:var(--hint);font-size:13px">Нужни са поне 2 запазени скана за timeline.<br>Натисни "Запази скан" след анализ.</div>`;
+    el.innerHTML=`<div style="text-align:center;padding:32px;color:var(--hint);font-size:13px">Нужни са поне 2 запазени скана за timeline.<br>Сканирането ще се запази автоматично след анализ.</div>`;
     return;
   }
 
@@ -12244,7 +12322,7 @@ function buildAISummaryCard(res){
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="dash-section-title" style="margin-bottom:0">AI РЕЗЮМЕ</div>
-      <button class="dash-summary-refresh" onclick="runAI(window.results,document.getElementById('claude-token').value.trim())" title="Генерирай пълен AI анализ">↻ Пълен анализ</button>
+      <button class="dash-summary-refresh" onclick="runAI(window.results,document.getElementById('claude-token').value.trim(),{full:true})" title="Генерирай пълен AI анализ">↻ Пълен анализ</button>
     </div>
     ${items.map(it=>`<div class="dash-summary-item"><span class="dash-summary-icon" style="color:${it.color}">${it.icon}</span><span>${it.text}</span></div>`).join('')}`;
 }
