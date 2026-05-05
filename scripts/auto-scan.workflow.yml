@@ -1,0 +1,39 @@
+name: Auto-scan ads
+
+on:
+  schedule:
+    # Daily at 06:00 UTC = 09:00 BG (EEST summer / 08:00 EET winter)
+    - cron: '0 6 * * *'
+  workflow_dispatch:  # allow manual trigger from Actions tab
+
+permissions:
+  contents: write  # commit data/ updates
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run auto-scan
+        env:
+          FB_TOKEN: ${{ secrets.FB_TOKEN }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: node scripts/auto-scan.mjs
+
+      - name: Commit data updates
+        run: |
+          git config user.name "auto-scan-bot"
+          git config user.email "bot@noreply"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "No data changes to commit"
+          else
+            git commit -m "auto-scan: $(date -u +%Y-%m-%d)"
+            git push
+          fi
