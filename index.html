@@ -4588,6 +4588,24 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   </div>
 
   <div class="tab-content active" id="tab-dashboard">
+    <!-- Story Layer — AI-generated weekly summary (always visible, empty state when no scan) -->
+    <div class="story-layer-card" id="story-layer-card" data-dash-card="story-layer">
+      <button class="dash-card-hide" onclick="hideDashCard('story-layer')" aria-label="Скрий тази карта">×</button>
+      <div class="story-layer-header">
+        <div class="story-layer-title">
+          <span class="story-layer-icon">📰</span>
+          <span>Седмично обобщение</span>
+          <span class="story-layer-confidence" id="story-layer-conf"></span>
+        </div>
+        <div class="story-layer-actions">
+          <span class="story-layer-meta" id="story-layer-meta"></span>
+          <button class="story-layer-refresh" id="story-layer-refresh" onclick="refreshStoryLayer()" title="Регенерирай" aria-label="Регенерирай обобщение">↻</button>
+        </div>
+      </div>
+      <div class="story-layer-body" id="story-layer-body">
+        <div class="story-layer-empty">📊 Стартирай анализ за персонализирано седмично обобщение. Story Layer използва Claude AI за да обобщи какво се е променило и какво да направиш.</div>
+      </div>
+    </div>
     <div class="dash-hero-header">
       <div class="dash-hero-eyebrow">
         <span class="dash-hero-dot"></span>
@@ -5389,6 +5407,8 @@ window.onload=()=>{
     if(typeof applyI18n==='function')applyI18n();
     // Pull server-side auto-scan results if deployed
     if(typeof loadAutoScanData==='function')loadAutoScanData();
+    // Initialize Story Layer (shows empty state when no scan, or cached narrative when present)
+    if(typeof generateStoryLayer==='function')setTimeout(()=>generateStoryLayer(false),200);
   }catch(e){
     console.error('[init] fatal init error:',e);
     if(typeof showErrorModal==='function'){
@@ -7418,22 +7438,8 @@ function renderDash(res){
   const metricsRow=document.getElementById('metrics-row');
   if(metricsRow)metricsRow.style.display='grid';
   // Dashboard v2: v2Top is prepended to brand cards html at the bottom of this function
+  // Note: story-layer-card lives statically in tab-dashboard HTML (always visible, populated via generateStoryLayer)
   const v2Top=`
-    <div class="story-layer-card" id="story-layer-card" data-dash-card="story-layer">
-      <button class="dash-card-hide" onclick="hideDashCard('story-layer')" aria-label="Скрий тази карта">×</button>
-      <div class="story-layer-header">
-        <div class="story-layer-title">
-          <span class="story-layer-icon">📰</span>
-          <span>Седмично обобщение</span>
-          <span class="story-layer-confidence" id="story-layer-conf"></span>
-        </div>
-        <div class="story-layer-actions">
-          <span class="story-layer-meta" id="story-layer-meta"></span>
-          <button class="story-layer-refresh" id="story-layer-refresh" onclick="refreshStoryLayer()" title="Регенерирай">↻</button>
-        </div>
-      </div>
-      <div class="story-layer-body" id="story-layer-body"></div>
-    </div>
     <div class="dash-timeline-card" data-dash-card="dash-timeline">
       <button class="dash-card-hide" onclick="hideDashCard('dash-timeline')" title="Скрий" aria-label="Скрий тази карта">×</button>
       <div class="dash-section-title">
