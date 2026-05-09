@@ -42,6 +42,7 @@ const HELP_CONTENT={
       {
         title:'Какво виждаш',
         items:[
+          '<strong>📰 Story Layer (Седмично обобщение):</strong> AI-генерирано обобщение на върха на Dashboard. Показва какво се е променило vs предишен скан + 1 препоръка за действие. Изисква Claude API ключ. Auto-генерира се след всеки скан, кеширан в localStorage.',
           '<strong>5 Metric Cards:</strong> общо реклами, активни брандове, най-дълъг winner, мин. бюджет, нови за 7 дни',
           '<strong>Timeline (30 скана):</strong> история по дни, всеки бранд = отделна линия',
           '<strong>Ad Presence by Brand:</strong> хоризонтални барове сравнение SoV (Share of Voice). Зеленото ↑ = ръст vs предишен скан',
@@ -4295,6 +4296,30 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .help-acc-body.open{display:block}
 /* ── Cmd+K Section Headers (Task 14) ── */
 .cmdk-section-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;padding:10px 14px 6px}
+/* ── Story Layer — AI-generated weekly summary ── */
+.story-layer-card{background:linear-gradient(135deg,rgba(245,166,35,0.06) 0%,rgba(77,159,255,0.04) 100%);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:12px;padding:18px 22px;margin:0 0 18px;position:relative;transition:all 0.2s}
+.story-layer-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.15)}
+.story-layer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px;flex-wrap:wrap}
+.story-layer-title{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px}
+.story-layer-icon{font-size:18px}
+.story-layer-confidence{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-left:4px}
+.story-layer-confidence.conf-high{background:rgba(110,231,183,0.15);color:#6ee7b7;border:1px solid rgba(110,231,183,0.4)}
+.story-layer-confidence.conf-medium{background:rgba(245,166,35,0.15);color:var(--amber);border:1px solid rgba(245,166,35,0.4)}
+.story-layer-confidence.conf-low{background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.4)}
+.story-layer-confidence.conf-insufficient{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.story-layer-actions{display:flex;align-items:center;gap:10px}
+.story-layer-meta{font-size:11px;color:var(--muted);font-family:var(--mono,monospace)}
+.story-layer-refresh{background:transparent;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.story-layer-refresh:hover{background:var(--surface2);color:var(--text);border-color:var(--amber)}
+.story-layer-refresh.spinning{animation:story-spin 1s linear infinite}
+@keyframes story-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.story-layer-body{font-size:14.5px;line-height:1.65;color:var(--text);font-family:var(--font-body,-apple-system,system-ui,sans-serif)}
+.story-layer-body strong{color:var(--amber);font-weight:700}
+.story-layer-body em.story-recommendation{display:block;margin-top:10px;padding:8px 12px;background:var(--surface);border-left:2px solid var(--amber);border-radius:4px;font-style:normal;font-size:13.5px;color:var(--text)}
+.story-layer-empty{font-size:13px;color:var(--muted);font-style:italic;line-height:1.55;padding:6px 0}
+.story-layer-loading{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:6px 0}
+.story-layer-loading .spinner{width:14px;height:14px;border-width:2px}
+.story-layer-disclaimer{font-size:11px;color:var(--muted);font-style:italic;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);opacity:0.8}
 </style>
 </head>
 <body>
@@ -7248,6 +7273,7 @@ function clearActivePresetIfChanged(){
 const DASH_LAYOUT_KEY='ads-intel-dash-layout';
 const DASH_LAYOUT_VERSION=1;
 const ALL_CARDS=[
+  {id:'story-layer',label:'📰 Седмично обобщение (AI)',default:true},
   {id:'metrics-row',label:'📊 Метрики (KPI)',default:true},
   {id:'dash-timeline',label:'📈 Активност по дни',default:true},
   {id:'dash-battle',label:'⚔ Ad Presence by Brand',default:true},
@@ -7257,8 +7283,8 @@ const ALL_CARDS=[
 ];
 const PRESETS={
   detailed:{name:'Detailed',sub:'Всички карти видими',cards:ALL_CARDS.map(c=>c.id)},
-  compact:{name:'Compact',sub:'Само ключови — KPI + AI',cards:['metrics-row','dash-summary']},
-  igaming:{name:'iGaming Focus',sub:'Фокус върху бонуси и тренд',cards:['metrics-row','welcome-bonus','dash-battle','dash-timeline']},
+  compact:{name:'Compact',sub:'Само ключови — Story + KPI + AI',cards:['story-layer','metrics-row','dash-summary']},
+  igaming:{name:'iGaming Focus',sub:'Фокус върху бонуси и тренд',cards:['story-layer','metrics-row','welcome-bonus','dash-battle','dash-timeline']},
 };
 function getDashLayout(){
   try{
@@ -7278,6 +7304,7 @@ function saveDashLayout(cards){
 function applyDashLayout(){
   const visible=new Set(getDashLayout());
   const cardSelectors={
+    'story-layer':'[data-dash-card="story-layer"]',
     'metrics-row':'[data-dash-card="metrics-row"]',
     'dash-timeline':'[data-dash-card="dash-timeline"]',
     'dash-battle':'[data-dash-card="dash-battle"]',
@@ -7392,6 +7419,21 @@ function renderDash(res){
   if(metricsRow)metricsRow.style.display='grid';
   // Dashboard v2: v2Top is prepended to brand cards html at the bottom of this function
   const v2Top=`
+    <div class="story-layer-card" id="story-layer-card" data-dash-card="story-layer">
+      <button class="dash-card-hide" onclick="hideDashCard('story-layer')" aria-label="Скрий тази карта">×</button>
+      <div class="story-layer-header">
+        <div class="story-layer-title">
+          <span class="story-layer-icon">📰</span>
+          <span>Седмично обобщение</span>
+          <span class="story-layer-confidence" id="story-layer-conf"></span>
+        </div>
+        <div class="story-layer-actions">
+          <span class="story-layer-meta" id="story-layer-meta"></span>
+          <button class="story-layer-refresh" id="story-layer-refresh" onclick="refreshStoryLayer()" title="Регенерирай">↻</button>
+        </div>
+      </div>
+      <div class="story-layer-body" id="story-layer-body"></div>
+    </div>
     <div class="dash-timeline-card" data-dash-card="dash-timeline">
       <button class="dash-card-hide" onclick="hideDashCard('dash-timeline')" title="Скрий" aria-label="Скрий тази карта">×</button>
       <div class="dash-section-title">
@@ -7494,6 +7536,8 @@ function renderDash(res){
   // Inject filter presets bar
   if(typeof injectPresetBar==='function')setTimeout(injectPresetBar,50);
   if(typeof clearActivePresetIfChanged==='function')clearActivePresetIfChanged();
+  // Generate Story Layer
+  if(typeof generateStoryLayer==='function')generateStoryLayer(false);
   // Apply dashboard layout customization
   if(typeof applyDashLayout==='function')setTimeout(applyDashLayout,50);
 }
@@ -8512,6 +8556,212 @@ function buildPlaybookSnapshot(brand){
     platforms:Object.entries(platforms).map(([p,c])=>({platform:p,count:c})).sort((a,b)=>b.count-a.count),
     topHooks:topHooks.map(h=>({hook:h.hook,days:h.days,wps:Math.round(h.wps*100),offer:h.offer}))
   };
+}
+
+// ═══ STORY LAYER — AI-generated weekly summary ═══
+const STORY_CACHE_KEY='ads-intel-story-cache';
+
+function getStoryCache(){try{return JSON.parse(localStorage.getItem(STORY_CACHE_KEY)||'null');}catch{return null;}}
+function setStoryCache(obj){localStorage.setItem(STORY_CACHE_KEY,JSON.stringify(obj));}
+
+function buildStoryContext(currentResults, prevScan){
+  // Compact summary suitable for short prompt
+  const cur = currentResults.map(r=>{
+    const ads = (r.copies||[]).filter(c=>!c.isShadow);
+    const newAds = ads.filter(c=>c.days!==null&&c.days<=7).length;
+    const longRunner = ads.reduce((max,c)=>(c.days&&c.days>max)?c.days:max,0);
+    const offers = [...new Set(ads.map(c=>c.offer).filter(Boolean))].slice(0,3);
+    const hooks = [...new Set(ads.map(c=>c.hook).filter(h=>h&&h.length>20))].slice(0,2);
+    return {
+      brand: r.name,
+      active_ads: r.count,
+      new_ads_7d: newAds,
+      longest_runner_days: longRunner||null,
+      sample_offers: offers,
+      sample_first_sentences: hooks
+    };
+  }).filter(b=>b.active_ads>0);
+
+  let delta = null;
+  if(prevScan && prevScan.results){
+    const prevMap = Object.fromEntries(prevScan.results.map(r=>[r.name,r.count||0]));
+    delta = cur.map(b=>{
+      const prevCount = prevMap[b.brand]||0;
+      return {brand:b.brand, current:b.active_ads, previous:prevCount, change:b.active_ads-prevCount};
+    });
+  }
+
+  return { current: cur, delta, scanCount: getH().length };
+}
+
+async function generateStoryLayer(forceRefresh=false){
+  const card = document.getElementById('story-layer-card');
+  const body = document.getElementById('story-layer-body');
+  const meta = document.getElementById('story-layer-meta');
+  const conf = document.getElementById('story-layer-conf');
+  const refresh = document.getElementById('story-layer-refresh');
+  if(!card || !body) return;
+
+  const results = window.results || [];
+  const claudeKey = document.getElementById('claude-token')?.value?.trim();
+
+  // Empty states
+  if(!results.length){
+    body.innerHTML = '<div class="story-layer-empty">📊 Стартирай анализ за персонализирано седмично обобщение. Story Layer използва Claude AI за да обобщи какво се е променило и какво да направиш.</div>';
+    if(meta)meta.textContent='';
+    if(conf){conf.textContent='';conf.className='story-layer-confidence';}
+    return;
+  }
+
+  if(!claudeKey){
+    body.innerHTML = '<div class="story-layer-empty">🔑 Story Layer изисква Claude API ключ. Добави го в API Tokens панела (sidebar) за да виждаш AI обобщение тук.</div>';
+    if(meta)meta.textContent='';
+    if(conf){conf.textContent='';conf.className='story-layer-confidence';}
+    return;
+  }
+
+  // Cache check
+  const cacheKey = results.map(r=>r.name+':'+r.count).sort().join('|');
+  const cached = getStoryCache();
+  if(!forceRefresh && cached && cached.cacheKey===cacheKey){
+    renderStoryFromCache(cached);
+    return;
+  }
+
+  // Build context
+  const hist = getH();
+  const prevScan = hist.length >= 1 ? hist[0] : null; // most recent saved scan
+  const ctx = buildStoryContext(results, prevScan);
+
+  // Show loading state
+  body.innerHTML = '<div class="story-layer-loading"><div class="spinner"></div><span>Claude генерира обобщение... (~10 сек)</span></div>';
+  if(refresh)refresh.classList.add('spinning');
+
+  // Determine confidence based on sample size
+  const totalAds = ctx.current.reduce((s,b)=>s+b.active_ads,0);
+  const totalBrands = ctx.current.length;
+  let dataConf = 'low';
+  if(totalAds >= 50 && totalBrands >= 4) dataConf = 'high';
+  else if(totalAds >= 20 && totalBrands >= 2) dataConf = 'medium';
+  else if(totalAds < 10 || totalBrands < 2) dataConf = 'insufficient';
+
+  if(dataConf === 'insufficient'){
+    body.innerHTML = '<div class="story-layer-empty">📉 Недостатъчни данни за обобщение. Нужни са поне 10 реклами от 2+ бранда. Текущо: '+totalAds+' реклами от '+totalBrands+' брандове.</div>';
+    if(refresh)refresh.classList.remove('spinning');
+    if(conf){conf.textContent='Недостатъчно данни';conf.className='story-layer-confidence conf-insufficient';}
+    return;
+  }
+
+  const prompt = `Ти си БГ iGaming пазарен аналитик. Напиши КРАТКО обобщение (60-90 думи) на текущото състояние на конкурентната активност за БГ iGaming.
+
+ДАННИ (от Meta Ad Library):
+${JSON.stringify(ctx.current, null, 2)}
+
+${ctx.delta ? `ПРОМЕНИ vs предишен скан:\n${JSON.stringify(ctx.delta, null, 2)}\n` : 'Това е първи скан — няма исторически данни за сравнение.'}
+
+ВАЖНО — ИНТЕРПРЕТАЦИЯ НА ДАННИТЕ:
+- active_ads = брой активни реклами в Meta Ad Library (не отразява реална пазарна сила)
+- longest_runner_days = най-дълго работеща реклама (потенциален winner индикатор)
+- new_ads_7d = реклами стартирали последните 7 дни (нова кампания/тест)
+- sample_offers и sample_first_sentences са регекс-извлечени, могат да са непълни
+
+ПРАВИЛА:
+1. Цитирай конкретни брандове и числа от данните
+2. Когато има delta vs предишен скан — спомени промените (+12 нови, -3 свалени)
+3. Идентифицирай 1 интересен сигнал (топ winner / нов бранд / агресивна кампания)
+4. Завърши с ЕДНА конкретна препоръка за действие
+5. Използвай "по индикатори от платформата", "сигналите показват" — НЕ "доказано е" или "лидер"
+6. БЕЗ markdown за заглавия
+7. Едно <strong>HTML тагче</strong> около ключови имена/числа е OK
+8. Препоръката отделена в края с тага <em class="story-recommendation">
+
+ФОРМАТ:
+[2-3 изречения за състоянието на пазара] <em class="story-recommendation">Препоръка: [конкретно действие]</em>
+
+Език: български. Тон: професионален, директен, без водни приказки.`;
+
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':claudeKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-opus-4-7',
+        max_tokens:500,
+        thinking:{type:'adaptive'},
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+
+    if(!resp.ok){
+      const err = await resp.text();
+      throw new Error('API '+resp.status+': '+err.substring(0,200));
+    }
+
+    const data = await resp.json();
+    let text = data.content?.find(c=>c.type==='text')?.text || '';
+    text = text.trim();
+
+    // Strip any leading markdown headers if model added them
+    text = text.replace(/^#+\s.*$/gm,'').trim();
+
+    // Cache
+    const now = Date.now();
+    setStoryCache({
+      cacheKey,
+      text,
+      timestamp:now,
+      brandCount:totalBrands,
+      adCount:totalAds,
+      confidence:dataConf,
+      hasComparison: !!ctx.delta
+    });
+
+    // Render
+    body.innerHTML = text + '<div class="story-layer-disclaimer">⚠ AI обобщение по индикатори от Meta Ad Library. Не заменя експертна преценка. Препоръката е насочваща, не задължителна.</div>';
+    if(meta){
+      meta.textContent = formatStoryMeta({timestamp:now, brandCount:totalBrands, adCount:totalAds, hasComparison:!!ctx.delta});
+    }
+    if(conf){
+      conf.textContent = ({high:'Висока',medium:'Средна',low:'Ниска'})[dataConf]||dataConf;
+      conf.className = 'story-layer-confidence conf-'+dataConf;
+    }
+  }catch(e){
+    console.error('[story-layer]',e);
+    body.innerHTML = '<div class="story-layer-empty">⚠ Грешка при генериране: '+e.message.substring(0,150)+'<br><small>Опитай ↻ refresh, или провери Claude API ключа.</small></div>';
+  }finally{
+    if(refresh)refresh.classList.remove('spinning');
+  }
+}
+
+function renderStoryFromCache(cache){
+  const body = document.getElementById('story-layer-body');
+  const meta = document.getElementById('story-layer-meta');
+  const conf = document.getElementById('story-layer-conf');
+  if(!body) return;
+  body.innerHTML = cache.text + '<div class="story-layer-disclaimer">⚠ AI обобщение по индикатори от Meta Ad Library. Не заменя експертна преценка.</div>';
+  if(meta) meta.textContent = formatStoryMeta(cache);
+  if(conf){
+    conf.textContent = ({high:'Висока',medium:'Средна',low:'Ниска',insufficient:'Недостатъчно данни'})[cache.confidence]||cache.confidence;
+    conf.className = 'story-layer-confidence conf-'+(cache.confidence||'low');
+  }
+}
+
+function formatStoryMeta(c){
+  const ago = (Date.now() - c.timestamp);
+  let agoStr = 'току-що';
+  if(ago > 60000) agoStr = Math.floor(ago/60000)+' мин';
+  if(ago > 3600000) agoStr = Math.floor(ago/3600000)+' ч';
+  if(ago > 86400000) agoStr = Math.floor(ago/86400000)+' дни';
+  return agoStr + ' · '+c.brandCount+' брандове · '+c.adCount+' реклами' + (c.hasComparison?' · vs предишен':'');
+}
+
+function refreshStoryLayer(){
+  generateStoryLayer(true);
 }
 
 async function generatePlaybook(brandIndex){
@@ -14008,6 +14258,7 @@ function buildCmdkItems(query){
     {id:'export',label:'⬇ Експорт',sub:'Свали отчет',category:'actions',keywords:'export download свали отчет',action:()=>{const b=document.getElementById('btn-export');if(b)b.click();}},
     {id:'full-report',label:'📊 Пълен отчет',sub:'Печатаем HTML/PDF отчет на цялата сесия',category:'actions',keywords:'report отчет full pdf print',action:()=>{if(typeof openFullReportModal==='function')openFullReportModal();}},
     {id:'ai-analyze',label:'✨ AI Анализ',sub:'Пълен Claude анализ',category:'actions',keywords:'ai claude analyze анализ',action:()=>{if(typeof runAI==='function'&&window.results)runAI(window.results,document.getElementById('claude-token').value.trim());}},
+    {id:'story-refresh',label:'📰 Обнови AI обобщение',sub:'Регенерирай Story Layer',category:'actions',keywords:'story layer summary refresh обобщение',action:()=>{if(typeof refreshStoryLayer==='function')refreshStoryLayer();}},
     {id:'focus',label:'◉ Focus Mode',sub:'Покажи само winners',category:'settings',keywords:'focus mode',action:()=>{if(typeof toggleFocusMode==='function')toggleFocusMode();}},
     {id:'course',label:'🎓 Курс',sub:'Обучителен курс',category:'help',keywords:'course tutorial курс обучение',action:()=>{if(typeof openCourseModal==='function')openCourseModal();}},
     {id:'legend',label:'📖 Легенда',sub:'Всички означения',category:'help',keywords:'legend symbols легенда',action:()=>{if(typeof openLegendModal==='function')openLegendModal();}},
