@@ -312,7 +312,7 @@ function dismissHelpBanner(){
 // ── Onboarding Wizard ────────────────────────────────────
 const ONBOARDING_KEY='ads-intel-onboarding-done';
 const PRESET_BG_BRANDS=['Inbet','Efbet','Betano','Winbet','Sesame','Calavera','Slybet','Palms Bet','Eurobet','Bet365'];
-let _onbStep=1,_onbSelectedBrands=new Set(),_onbDismissed=false;
+let _onbStep=1,_onbSelectedBrands=new Set(),_onbDismissed=false,_onbIntent=null;
 
 // ── i18n System (Lightweight BG/EN) ──────────────────────
 const I18N_KEY='ads-intel-lang';
@@ -412,16 +412,22 @@ function openOnboardingWizard(){
   _onbStep=1;
   _onbSelectedBrands=new Set();
   _onbDismissed=false;
+  _onbIntent=null;
   document.getElementById('onb-overlay')?.remove();
   const overlay=document.createElement('div');
   overlay.className='onb-overlay';
   overlay.id='onb-overlay';
+  overlay.setAttribute('role','dialog');
+  overlay.setAttribute('aria-modal','true');
   document.body.appendChild(overlay);
   setTimeout(()=>overlay.classList.add('open'),20);
   renderOnboardingStep();
   const esc=(e)=>{if(e.key==='Escape')dismissOnboarding();};
   document.addEventListener('keydown',esc);
   overlay._escHandler=esc;
+  const dismissFn=dismissOnboarding;
+  const release=trapFocus(overlay,dismissFn);
+  overlay._releaseFocus=release;
 }
 
 function renderOnboardingStep(){
@@ -431,23 +437,50 @@ function renderOnboardingStep(){
     <div class="onb-progress">
       <div class="onb-progress-step ${_onbStep>=1?(_onbStep>1?'done':'active'):''}"></div>
       <div class="onb-progress-step ${_onbStep>=2?(_onbStep>2?'done':'active'):''}"></div>
-      <div class="onb-progress-step ${_onbStep>=3?'active':''}"></div>
+      <div class="onb-progress-step ${_onbStep>=3?(_onbStep>3?'done':'active'):''}"></div>
+      <div class="onb-progress-step ${_onbStep>=4?'active':''}"></div>
     </div>`;
   let body='';
   if(_onbStep===1){
     body=`
       <div class="onb-body">
-        <div class="onb-step-num">Стъпка 1 от 3</div>
-        <div class="onb-title">👋 Добре дошъл в Outfox Ads Intelligence</div>
-        <div class="onb-subtitle">За да работи приложението, нужни са ти 2 безплатни API ключа. Можеш да ги добавиш сега или по-късно.</div>
-        <div class="onb-course-cta" onclick="onbStartWithCourse()">
-          <div class="onb-course-cta-icon">🎓</div>
-          <div class="onb-course-cta-text">
-            <div class="onb-course-cta-title">Първо разгледай курса (10 мин)</div>
-            <div class="onb-course-cta-sub">15 кратки лекции — какво е приложението и как се ползва. Препоръчително преди първия скан.</div>
-          </div>
-          <div class="onb-course-cta-arrow">→</div>
+        <div class="onb-step-num">Стъпка 1 от 4</div>
+        <div class="onb-title">👋 Какво искаш първо?</div>
+        <div class="onb-subtitle">Избери как искаш да започнеш — можеш да смениш по всяко време.</div>
+        <div class="onb-final-actions">
+          <button class="onb-action-btn primary" onclick="onbChooseIntent('course')">
+            <div class="onb-action-icon">🎓</div>
+            <div class="onb-action-text">
+              <div class="onb-action-title">Първо разгледай курса (10 мин)</div>
+              <div class="onb-action-sub">15 интерактивни лекции — какво е приложението и как се ползва.</div>
+            </div>
+          </button>
+          <button class="onb-action-btn" onclick="onbChooseIntent('configure')">
+            <div class="onb-action-icon">⚡</div>
+            <div class="onb-action-text">
+              <div class="onb-action-title">Конфигурирай и пусни (5 мин)</div>
+              <div class="onb-action-sub">Въведи API ключове и стартирай първи скан веднага.</div>
+            </div>
+          </button>
+          <button class="onb-action-btn" onclick="onbChooseIntent('browse')">
+            <div class="onb-action-icon">👀</div>
+            <div class="onb-action-text">
+              <div class="onb-action-title">Просто разглеждай</div>
+              <div class="onb-action-sub">Без конфигурация. Можеш да въведеш ключове по-късно.</div>
+            </div>
+          </button>
         </div>
+      </div>
+      <div class="onb-footer">
+        <button class="onb-skip" onclick="dismissOnboarding()">Прескочи цялото onboarding</button>
+        <div class="onb-footer-actions"></div>
+      </div>`;
+  }else if(_onbStep===2){
+    body=`
+      <div class="onb-body">
+        <div class="onb-step-num">Стъпка 2 от 4</div>
+        <div class="onb-title">🔑 API ключове</div>
+        <div class="onb-subtitle">За да работи приложението, нужни са ти 2 безплатни API ключа. Можеш да ги добавиш сега или по-късно.</div>
         <div class="onb-section">
           <div class="onb-input-label">
             <span>Facebook Access Token</span>
@@ -474,14 +507,15 @@ function renderOnboardingStep(){
       <div class="onb-footer">
         <button class="onb-skip" onclick="dismissOnboarding()">Прескочи цялото onboarding</button>
         <div class="onb-footer-actions">
+          <button class="onb-btn" onclick="onbStepBack()">← Назад</button>
           <button class="onb-btn primary" onclick="onbStepNext()">Напред →</button>
         </div>
       </div>`;
-  }else if(_onbStep===2){
+  }else if(_onbStep===3){
     const chips=PRESET_BG_BRANDS.map(b=>`<button class="onb-chip${_onbSelectedBrands.has(b)?' active':''}" onclick="toggleOnbBrand('${b.replace(/'/g,"\\'")}')">${b}</button>`).join('');
     body=`
       <div class="onb-body">
-        <div class="onb-step-num">Стъпка 2 от 3</div>
+        <div class="onb-step-num">Стъпка 3 от 4</div>
         <div class="onb-title">🎯 Кои конкуренти да следиш?</div>
         <div class="onb-subtitle">Избери поне един бранд. Можеш да добавиш и собствени.</div>
         <div class="onb-section">
@@ -505,10 +539,10 @@ function renderOnboardingStep(){
         </div>
       </div>`;
   }else{
-    const hasToken=document.getElementById('onb-fb-token')?.value?.trim();
+    const hasToken=document.getElementById('onb-fb-token')?.value?.trim()||document.getElementById('fb-token')?.value?.trim();
     body=`
       <div class="onb-body">
-        <div class="onb-step-num">Стъпка 3 от 3</div>
+        <div class="onb-step-num">Стъпка 4 от 4</div>
         <div class="onb-title">🚀 Готов си!</div>
         <div class="onb-subtitle">Избра <strong style="color:var(--amber)">${_onbSelectedBrands.size} бранда</strong>. Какво искаш да направиш сега?</div>
         <div class="onb-final-actions">
@@ -551,12 +585,44 @@ function renderOnboardingStep(){
       </div>`;
   }
   overlay.innerHTML=`<div class="onb-modal">${progressBar}${body}</div>`;
-  if(_onbStep===1){
+  if(_onbStep===2){
     const fb=document.getElementById('fb-token')?.value;
     const cl=document.getElementById('claude-token')?.value;
-    if(fb)document.getElementById('onb-fb-token').value=fb;
-    if(cl)document.getElementById('onb-claude-token').value=cl;
+    const fbInp=document.getElementById('onb-fb-token');
+    const clInp=document.getElementById('onb-claude-token');
+    if(fb&&fbInp)fbInp.value=fb;
+    if(cl&&clInp)clInp.value=cl;
   }
+}
+
+function onbChooseIntent(intent){
+  _onbIntent=intent;
+  if(intent==='course'){
+    // Close onboarding, mark course-onboarding-done flag, open course modal
+    localStorage.setItem('ads-intel-course-onboarding-done','1');
+    localStorage.setItem(ONBOARDING_KEY,'1');
+    const overlay=document.getElementById('onb-overlay');
+    if(overlay){
+      if(overlay._escHandler)document.removeEventListener('keydown',overlay._escHandler);
+      overlay.classList.remove('open');
+      setTimeout(()=>overlay.remove(),300);
+    }
+    setTimeout(()=>{if(typeof openCourseModal==='function')openCourseModal();},350);
+    return;
+  }
+  if(intent==='browse'){
+    // Just close onboarding — DO NOT mark done so user can re-trigger
+    const overlay=document.getElementById('onb-overlay');
+    if(overlay){
+      if(overlay._escHandler)document.removeEventListener('keydown',overlay._escHandler);
+      overlay.classList.remove('open');
+      setTimeout(()=>overlay.remove(),300);
+    }
+    return;
+  }
+  // 'configure' → continue to step 2 (API keys)
+  _onbStep=2;
+  renderOnboardingStep();
 }
 
 function pasteToOnb(targetId){
@@ -585,20 +651,25 @@ function addOnbCustomBrand(){
 }
 
 function onbStepNext(){
-  if(_onbStep===1){
+  if(_onbStep===2){
     const fb=document.getElementById('onb-fb-token')?.value?.trim();
     const cl=document.getElementById('onb-claude-token')?.value?.trim();
-    if(fb)document.getElementById('fb-token').value=fb;
-    if(cl)document.getElementById('claude-token').value=cl;
+    const fbT=document.getElementById('fb-token');
+    const clT=document.getElementById('claude-token');
+    if(fb&&fbT)fbT.value=fb;
+    if(cl&&clT)clT.value=cl;
     if(typeof saveSet==='function')saveSet();
   }
-  if(_onbStep===2){
+  if(_onbStep===3){
     if(_onbSelectedBrands.size===0)return;
   }
-  if(_onbStep<3){_onbStep++;renderOnboardingStep();}
+  if(_onbStep<4){_onbStep++;renderOnboardingStep();}
 }
 
-function onbStepBack(){if(_onbStep>1){_onbStep--;renderOnboardingStep();}}
+function onbStepBack(){
+  // If on step 2 (API keys, only reached via 'configure'), go back to intent picker
+  if(_onbStep>1){_onbStep--;renderOnboardingStep();}
+}
 
 function applyOnbBrandsToChips(){
   const chipsHost=document.getElementById('chips');
@@ -666,6 +737,7 @@ function dismissOnboarding(){
   const overlay=document.getElementById('onb-overlay');
   if(overlay){
     if(overlay._escHandler)document.removeEventListener('keydown',overlay._escHandler);
+    if(overlay._releaseFocus)overlay._releaseFocus();
     overlay.classList.remove('open');
     setTimeout(()=>overlay.remove(),300);
   }
@@ -776,20 +848,55 @@ function closeHelpDrawer(){
   document.getElementById('help-backdrop')?.classList.remove('show');
 }
 
+function toggleHelpSection(sid){
+  const target=document.getElementById(sid);
+  if(!target)return;
+  const wasOpen=target.classList.contains('open');
+  // Close all (one open at a time)
+  document.querySelectorAll('.help-acc-header').forEach(h=>h.classList.remove('open'));
+  document.querySelectorAll('.help-acc-body').forEach(b=>b.classList.remove('open'));
+  if(!wasOpen){
+    target.classList.add('open');
+    target.previousElementSibling?.classList.add('open');
+  }
+  // Update aria-expanded on all headers
+  document.querySelectorAll('.help-acc-header').forEach(h=>{
+    const targetId=h.getAttribute('aria-controls');
+    const body=document.getElementById(targetId);
+    h.setAttribute('aria-expanded',body?.classList.contains('open')?'true':'false');
+  });
+}
+
 function updateHelpContent(tabId){
   _activeHelpTab=tabId;
   if(!_helpOpen)return;
   const data=HELP_CONTENT[tabId]||HELP_CONTENT.dashboard;
   const body=document.getElementById('help-drawer-body');
   if(!body)return;
-  // Build sections HTML (new richer format)
+  // Build sections HTML — accordion (Task 13). Each section collapsed by default.
   let sectionsHtml='';
   if(data.sections){
-    sectionsHtml=data.sections.map(s=>{
+    sectionsHtml=data.sections.map((s,i)=>{
       let inner='';
       if(s.body)inner+=`<div class="help-desc" style="margin-bottom:8px">${s.body}</div>`;
       if(s.items)inner+=`<ul class="help-tips">${s.items.map(t=>`<li>${t}</li>`).join('')}</ul>`;
-      return `<div class="help-subsection"><div class="help-subsection-title">${s.title}</div>${inner}</div>`;
+      // Extract first sentence from body OR first item for summary
+      const rawSrc=s.body||(s.items&&s.items[0])||'';
+      const plain=String(rawSrc).replace(/<[^>]+>/g,'');
+      let summary=plain.split(/[.!?]/)[0].trim().substring(0,80);
+      if(plain.length>summary.length)summary+='…';
+      const icon=s.icon||(/работ|принцип/i.test(s.title||'')?'⚙':/виж|какво/i.test(s.title||'')?'👁':/бутон|действ/i.test(s.title||'')?'⚡':/метрик/i.test(s.title||'')?'📊':/филт/i.test(s.title||'')?'🔍':'📖');
+      const sid='help-acc-'+_activeHelpTab+'-'+i;
+      return `
+        <div class="help-acc-section">
+          <button type="button" class="help-acc-header" onclick="toggleHelpSection('${sid}')" aria-expanded="false" aria-controls="${sid}">
+            <span class="help-acc-icon">${icon}</span>
+            <span class="help-acc-title">${s.title||''}</span>
+            <span class="help-acc-summary">${summary.replace(/"/g,'&quot;')}</span>
+            <span class="help-acc-arrow">▼</span>
+          </button>
+          <div class="help-acc-body" id="${sid}">${inner}</div>
+        </div>`;
     }).join('');
   }else if(data.tips){
     sectionsHtml=`<ul class="help-tips">${data.tips.map(t=>`<li>${t}</li>`).join('')}</ul>`;
@@ -916,7 +1023,7 @@ function openLegendModal(){
     </div>
   `).join('');
   const html=`
-    <div id="legend-modal" class="legend-backdrop" onclick="if(event.target===this)closeLegendModal()">
+    <div id="legend-modal" class="legend-backdrop" role="dialog" aria-modal="true" onclick="if(event.target===this)closeLegendModal()">
       <div class="legend-modal">
         <div class="legend-hdr">
           <div>
@@ -933,8 +1040,17 @@ function openLegendModal(){
       </div>
     </div>`;
   document.body.insertAdjacentHTML('beforeend',html);
+  const modalEl=document.getElementById('legend-modal');
+  if(modalEl){
+    const release=trapFocus(modalEl,closeLegendModal);
+    modalEl._releaseFocus=release;
+  }
 }
-function closeLegendModal(){document.getElementById('legend-modal')?.remove();}
+function closeLegendModal(){
+  const modalEl=document.getElementById('legend-modal');
+  if(modalEl&&modalEl._releaseFocus)modalEl._releaseFocus();
+  modalEl?.remove();
+}
 // ESC closes legend
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLegendModal();closeCourseModal();}});
 
@@ -1933,7 +2049,7 @@ function openCourseModal(){
   const firstIncomplete=COURSE_LESSONS.findIndex(l=>!isLessonComplete(l.id));
   _activeLessonIdx=firstIncomplete>=0?firstIncomplete:0;
   const html=`
-    <div id="course-modal" class="course-backdrop" onclick="if(event.target===this)closeCourseModal()">
+    <div id="course-modal" class="course-backdrop" role="dialog" aria-modal="true" onclick="if(event.target===this)closeCourseModal()">
       <div class="course-modal">
         <div class="course-hdr">
           <div style="display:flex;align-items:center;gap:14px;flex:1">
@@ -1958,9 +2074,18 @@ function openCourseModal(){
   document.body.insertAdjacentHTML('beforeend',html);
   renderCourseSidebar();
   renderCourseLesson(_activeLessonIdx);
+  const modalEl=document.getElementById('course-modal');
+  if(modalEl){
+    const release=trapFocus(modalEl,closeCourseModal);
+    modalEl._releaseFocus=release;
+  }
 }
 
-function closeCourseModal(){document.getElementById('course-modal')?.remove();}
+function closeCourseModal(){
+  const modalEl=document.getElementById('course-modal');
+  if(modalEl&&modalEl._releaseFocus)modalEl._releaseFocus();
+  modalEl?.remove();
+}
 
 function renderCourseSidebar(){
   const sb=document.getElementById('course-sidebar');
@@ -2093,6 +2218,13 @@ function completeAndNext(){
   --red:#e05555;--red-dim:rgba(224,85,85,0.11);
   --blue:#4d9fff;--blue-dim:rgba(77,159,255,0.11);
   --purple:#a259f7;--purple-dim:rgba(162,89,247,0.11);
+  /* Semantic colors — disambiguated from brand --amber */
+  --warning:#FF9F43;--warning-dim:rgba(255,159,67,0.12);
+  --success:#10B981;--success-dim:rgba(16,185,129,0.12);
+  --danger:#EF4444;--danger-dim:rgba(239,68,68,0.12);
+  --info:#4D9FFF;--info-dim:rgba(77,159,255,0.12);
+  --accent-secondary:#4D9FFF;
+  --dash-max-width:1400px;
   --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   --mono:'JetBrains Mono','SF Mono','Fira Code','Consolas',monospace;
   --radius-sm:8px;--radius-md:12px;--radius-lg:16px;
@@ -2100,6 +2232,15 @@ function completeAndNext(){
   --shadow-md:0 6px 20px rgba(0,0,0,0.45),0 2px 8px rgba(0,0,0,0.3);
   --shadow-lg:0 12px 36px rgba(0,0,0,0.6),0 4px 16px rgba(0,0,0,0.35);
   --transition:all .18s cubic-bezier(0.4,0,0.2,1);
+  --z-base:1;
+  --z-sticky:10;
+  --z-dropdown:20;
+  --z-floating:30;
+  --z-toast:40;
+  --z-drawer:50;
+  --z-modal-backdrop:100;
+  --z-modal-content:110;
+  --z-cmd-palette:200;
 }
 /* ── Light Theme ──────────────────────────────────────────── */
 html[data-theme="light"]{
@@ -2118,6 +2259,11 @@ html[data-theme="light"]{
   --blue:#1f6fde;
   --red:#cc3a3a;
   --purple:#7d3fc8;
+  --warning:#E07F1A;--warning-dim:rgba(224,127,26,0.12);
+  --success:#0E9C5C;--success-dim:rgba(14,156,92,0.12);
+  --danger:#CC3A3A;--danger-dim:rgba(204,58,58,0.12);
+  --info:#1F6FDE;--info-dim:rgba(31,111,222,0.12);
+  --accent-secondary:#1F6FDE;
   --shadow-sm:0 1px 3px rgba(0,0,0,0.08);
   --shadow-md:0 4px 14px rgba(0,0,0,0.1);
   --shadow-lg:0 14px 50px rgba(0,0,0,0.15);
@@ -2202,10 +2348,13 @@ a{color:var(--amber);text-decoration:none}a:hover{text-decoration:underline}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:6px}::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 
 .shell{display:grid;grid-template-columns:272px 1fr;min-height:100vh}
-.sidebar{background:linear-gradient(180deg,var(--surface) 0%,rgba(17,21,32,0.98) 100%);border-right:1px solid var(--border2);padding:18px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:50;box-shadow:4px 0 30px rgba(0,0,0,0.4)}
-.sidebar-toggle{display:none;position:fixed;top:12px;left:12px;z-index:60;width:42px;height:42px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:18px;align-items:center;justify-content:center;box-shadow:var(--shadow-md);transition:var(--transition)}
+/* Constrain DELTA's error banner to dashboard width with consistent padding */
+#error-banner-host{max-width:var(--dash-max-width)!important;margin:0 auto!important;padding:0 24px!important;width:100%!important;box-sizing:border-box!important}
+@media(max-width:900px){#error-banner-host{padding:0 16px!important}}
+.sidebar{background:linear-gradient(180deg,var(--surface) 0%,rgba(17,21,32,0.98) 100%);border-right:1px solid var(--border2);padding:18px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:var(--z-sticky);box-shadow:4px 0 30px rgba(0,0,0,0.4)}
+.sidebar-toggle{display:none;position:fixed;top:12px;left:12px;z-index:calc(var(--z-sticky) + 10);width:42px;height:42px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:18px;align-items:center;justify-content:center;box-shadow:var(--shadow-md);transition:var(--transition)}
 .sidebar-toggle:hover{border-color:var(--amber);color:var(--amber);box-shadow:0 0 0 3px rgba(245,166,35,0.18)}
-.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:40}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:calc(var(--z-sticky) - 10)}
 .sidebar-backdrop.show{display:block}
 @media (max-width:900px){
   .shell{grid-template-columns:1fr}
@@ -2237,7 +2386,7 @@ a{color:var(--amber);text-decoration:none}a:hover{text-decoration:underline}
 .tab-content.active{display:block}
 
 .section{display:flex;flex-direction:column;gap:8px}
-.section-label{font-size:13px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--amber);opacity:0.75}
+.section-label{font-size:13px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);opacity:0.75}
 
 input[type=text],input[type=password],select{width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:8px 11px;font-size:14px;font-family:var(--font);outline:none;transition:var(--transition)}
 input:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow),0 0 0 1px rgba(245,166,35,0.2)}
@@ -2274,19 +2423,21 @@ input:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--am
 .btn-run.loading::after{content:'';position:absolute;bottom:0;left:0;height:2px;background:rgba(0,0,0,0.3);animation:prog 1.5s ease-in-out infinite}
 @keyframes prog{0%{left:0;width:0}50%{left:20%;width:60%}100%{left:100%;width:0}}
 
-.btn-run-sticky{position:sticky;bottom:0;background:var(--surface);padding:12px 0;margin:0 -18px 0 -18px;padding-left:18px;padding-right:18px;border-top:1px solid var(--border2);z-index:5;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+.btn-run-sticky{position:sticky;bottom:0;background:var(--surface);padding:12px 0;margin:0 -18px 0 -18px;padding-left:18px;padding-right:18px;border-top:1px solid var(--border2);z-index:var(--z-base);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
 html[data-theme="light"] .btn-run-sticky{background:rgba(255,255,255,0.92);}
 
 .metrics-row{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:24px}
-.metric{position:relative;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-md);padding:16px 16px;border-top:2px solid var(--border2);transition:var(--transition);cursor:default}
-.metric:hover{border-top-color:var(--amber);box-shadow:var(--shadow-sm),0 0 0 1px rgba(245,166,35,0.08)}
-.metric-val{font-size:23px;font-weight:700;letter-spacing:-0.8px;color:var(--amber);line-height:1.2}
+.metric{position:relative;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-md);padding:16px 16px;border-top:1px solid var(--border2);transition:var(--transition);cursor:default}
+.metric:hover{border-top-width:1.5px;border-top-color:var(--border2);box-shadow:var(--shadow-sm)}
+.metric.metric-primary{background:var(--surface2);border-top-width:2px}
+.metric.metric-primary .metric-val{font-size:32px}
+.metric-val{font-size:23px;font-weight:700;letter-spacing:-0.6px;color:var(--text);line-height:1.2}
 .metric-label{font-size:12px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;font-weight:500}
 .metric-info{position:absolute;top:6px;right:6px;width:14px;height:14px;border-radius:50%;background:var(--surface3,var(--border));color:var(--muted);font-size:10px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:help;border:1px solid var(--border);transition:all 0.15s}
 .metric-info:hover{background:var(--amber);color:#0b0d12;border-color:var(--amber)}
-.metric-info-bubble{position:absolute;top:24px;right:6px;width:240px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;display:none;text-align:left;white-space:normal}
+.metric-info-bubble{position:absolute;top:24px;right:6px;width:240px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.55;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:var(--z-floating);display:none;text-align:left;white-space:normal}
 .metric-info-bubble.open{display:block}
-.metric-info-bubble strong{color:var(--amber);font-size:11px;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px}
+.metric-info-bubble strong{color:var(--text);font-size:10.5px;font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px}
 .metric-info-bubble code{background:var(--surface);padding:1px 5px;border-radius:3px;font-size:11px}
 
 .comp-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-md);margin-bottom:12px;overflow:hidden;transition:var(--transition)}
@@ -2401,22 +2552,22 @@ html[data-theme="light"] .btn-run-sticky{background:rgba(255,255,255,0.92);}
 
 .empty{text-align:center;padding:80px 20px;color:var(--muted)}
 /* ── Dashboard Hero Header (centered + accent) ──────────────── */
-.dash-hero-header{text-align:center;padding:28px 20px 22px;position:relative;border-bottom:1px solid var(--border);margin-bottom:8px;animation:welcome-fade-in .55s ease}
-.dash-hero-header::after{content:'';position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);box-shadow:0 0 12px rgba(245,166,35,0.6)}
-.dash-hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--amber);background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:20px;padding:5px 12px;margin-bottom:14px;font-family:var(--font-mono,monospace)}
+.dash-hero-header{text-align:center;padding:22px 20px 18px;position:relative;border-bottom:1px solid var(--border);margin-bottom:24px;animation:welcome-fade-in .55s ease}
+.dash-hero-header::after{content:'';position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);width:80px;height:1px;background:var(--border2)}
+.dash-hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--border2);border-radius:20px;padding:4px 11px;margin-bottom:12px;font-family:var(--font-mono,monospace)}
 .dash-hero-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);animation:dash-hero-dot 1.6s ease-in-out infinite}
 @keyframes dash-hero-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
-.dash-hero-title{font-size:36px;font-weight:800;letter-spacing:-1.2px;line-height:1.1;margin-bottom:10px;color:var(--text)}
-.dash-hero-accent{background:linear-gradient(135deg,var(--amber) 0%,#ffb84d 50%,#e0851a 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative}
+.dash-hero-title{font-size:24px;font-weight:700;letter-spacing:-0.5px;line-height:1.2;margin-bottom:8px;color:var(--text)}
+.dash-hero-accent{color:var(--text);position:relative}
 .dash-hero-meta{font-size:15px;color:var(--muted);max-width:540px;margin:0 auto;line-height:1.6}
-.dash-hero-meta strong{color:var(--amber);font-weight:700}
+.dash-hero-meta strong{color:var(--text);font-weight:700}
 @media (max-width:640px){.dash-hero-title{font-size:26px;letter-spacing:-0.8px}.dash-hero-meta{font-size:13.5px}}
 /* ── Welcome Screen ───────────────────────────────────────────── */
 .welcome-screen{padding:36px 24px 60px;animation:welcome-fade-in .6s ease}
 @keyframes welcome-fade-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .welcome-hero{text-align:center;padding:24px 20px 44px;position:relative}
 .welcome-orb{width:120px;height:120px;margin:0 auto 28px;position:relative;display:flex;align-items:center;justify-content:center}
-.welcome-orb-core{width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffd17a 0%,var(--amber) 45%,#c97312 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(245,166,35,0.5),0 0 80px rgba(245,166,35,0.25),inset 0 -8px 20px rgba(0,0,0,0.3);animation:welcome-orb-float 4s ease-in-out infinite;position:relative;z-index:2}
+.welcome-orb-core{width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffd17a 0%,var(--amber) 45%,#c97312 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(245,166,35,0.5),0 0 80px rgba(245,166,35,0.25),inset 0 -8px 20px rgba(0,0,0,0.3);animation:welcome-orb-float 4s ease-in-out infinite;position:relative;z-index:var(--z-base)}
 .welcome-orb-core svg{animation:welcome-orb-spin 8s linear infinite}
 @keyframes welcome-orb-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes welcome-orb-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
@@ -2486,7 +2637,7 @@ html[data-theme="light"] .btn-run-sticky{background:rgba(255,255,255,0.92);}
 .btn-ai-hero{background:linear-gradient(135deg,var(--amber),#e0851a);color:#0b0d12;border:none;border-radius:var(--radius-sm);padding:8px 17px;cursor:pointer;font-size:14px;font-weight:700;letter-spacing:-0.2px;box-shadow:0 3px 12px rgba(245,166,35,0.38);transition:var(--transition);display:inline-flex;align-items:center;gap:6px;font-family:var(--font)}
 .btn-ai-hero:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(245,166,35,0.52)}
 .btn-ai-hero:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
-.export-menu{display:none;position:absolute;top:calc(100% + 7px);right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);padding:5px;min-width:220px;z-index:30}
+.export-menu{display:none;position:absolute;top:calc(100% + 7px);right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);padding:5px;min-width:220px;z-index:var(--z-dropdown)}
 .export-menu.show{display:flex;flex-direction:column;gap:2px}
 .export-menu button{background:none;border:none;color:var(--text);text-align:left;padding:10px 14px;font-size:14px;cursor:pointer;border-radius:6px;font-family:var(--font);white-space:nowrap;transition:var(--transition)}
 .export-menu button:hover{background:var(--surface2);color:var(--amber)}
@@ -2612,7 +2763,7 @@ html[data-theme="light"] .btn-run-sticky{background:rgba(255,255,255,0.92);}
 .btn-copy-card.copied{border-color:var(--green);color:var(--green)}
 
 /* Auth modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:var(--z-modal-backdrop);display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal-overlay.show{display:flex}
 .modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:32px;width:380px;max-width:92vw;box-shadow:var(--shadow-lg)}
 .modal-title{font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.4px}
@@ -2640,7 +2791,7 @@ html[data-theme="light"] .btn-run-sticky{background:rgba(255,255,255,0.92);}
 .btn-logout:hover{color:var(--red)}
 /* User dropdown menu */
 .user-area-wrapper{position:relative;display:flex;flex-direction:column;gap:12px}
-.user-menu{position:absolute;top:100%;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.3);padding:6px;min-width:200px;z-index:100;display:none;margin-top:6px}
+.user-menu{position:absolute;top:100%;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.3);padding:6px;min-width:200px;z-index:var(--z-dropdown);display:none;margin-top:6px}
 .user-menu.open{display:block}
 .user-menu-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:5px;cursor:pointer;font-size:13px;color:var(--text);transition:background 0.15s;user-select:none}
 .user-menu-item:hover{background:var(--surface3)}
@@ -2664,8 +2815,8 @@ table.db-table tr:hover td{background:var(--surface2)}
 .db-search{width:100%;margin-bottom:11px;font-size:14px;padding:8px 11px}
 .db-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
 .db-stat{background:var(--surface);border:1px solid var(--border2);border-top:2px solid var(--border2);border-radius:var(--radius-md);padding:13px 15px;transition:var(--transition)}
-.db-stat:hover{border-top-color:var(--amber);box-shadow:var(--shadow-sm)}
-.db-stat-val{font-size:23px;font-weight:700;color:var(--amber);letter-spacing:-0.8px;line-height:1.2}
+.db-stat:hover{border-top-color:var(--border2);border-top-width:1.5px;box-shadow:var(--shadow-sm)}
+.db-stat-val{font-size:23px;font-weight:700;color:var(--text);letter-spacing:-0.6px;line-height:1.2}
 .db-stat-lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;font-weight:500}
 .realtime-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;display:inline-block;margin-right:4px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
@@ -2679,9 +2830,11 @@ table.db-table tr:hover td{background:var(--surface2)}
 .run-summary{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;color:var(--muted);line-height:1.65}
 .run-summary span{color:var(--text);font-weight:500}
 
-.toast{position:fixed;bottom:96px;right:22px;border-radius:var(--radius-sm);font-size:14px;z-index:999;display:none;max-width:320px;padding:11px 17px;font-weight:500;box-shadow:var(--shadow-lg)}
-.toast.error{background:var(--red);color:#fff}
-.toast.success{background:var(--green);color:#0b0d12;font-weight:600}
+.toast{position:fixed;bottom:96px;right:22px;border-radius:var(--radius-sm);font-size:14px;z-index:var(--z-toast);display:none;max-width:320px;padding:11px 17px;font-weight:500;box-shadow:var(--shadow-lg)}
+.toast.error{background:var(--danger);color:#fff}
+.toast.success{background:var(--success);color:#fff;font-weight:600}
+.toast.warning{background:var(--warning);color:#0b0d12;font-weight:600}
+.toast.info{background:var(--info);color:#fff;font-weight:600}
 .toast.show{display:block;animation:fadeup .22s ease}
 @keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
@@ -2795,10 +2948,10 @@ table.db-table tr:hover td{background:var(--surface2)}
 .cc-swipe:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
 .cc-swipe.saved{border-color:var(--amber);color:var(--amber);background:var(--amber-dim);font-weight:600}
 
-.swipe-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:90;animation:swipe-fade .2s ease}
+.swipe-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:calc(var(--z-drawer) - 1);animation:swipe-fade .2s ease}
 .swipe-backdrop.open{display:block}
 @keyframes swipe-fade{from{opacity:0}to{opacity:1}}
-.swipe-panel{position:fixed;right:-460px;top:0;height:100vh;width:440px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border2);box-shadow:-12px 0 40px rgba(0,0,0,0.6);z-index:91;display:flex;flex-direction:column;transition:right .28s cubic-bezier(0.4,0,0.2,1)}
+.swipe-panel{position:fixed;right:-460px;top:0;height:100vh;width:440px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border2);box-shadow:-12px 0 40px rgba(0,0,0,0.6);z-index:var(--z-drawer);display:flex;flex-direction:column;transition:right .28s cubic-bezier(0.4,0,0.2,1)}
 .swipe-panel.open{right:0}
 .swipe-hdr{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;background:linear-gradient(180deg,var(--surface),var(--surface2))}
 .swipe-hdr-title{font-size:16px;font-weight:700;letter-spacing:-0.3px;flex:1;display:flex;align-items:center;gap:8px}
@@ -2894,7 +3047,7 @@ table.db-table tr:hover td{background:var(--surface2)}
 .trends-chart-card .tr-axlabel{font-size:13px;fill:var(--hint);font-family:inherit}
 .trends-chart-card .tr-empty{text-align:center;padding:80px 20px;color:var(--hint)}
 .trends-chart-card .tr-empty .tre-icon{font-size:32px;margin-bottom:10px;opacity:0.6}
-#trends-tooltip{position:fixed;background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;pointer-events:none;z-index:9999;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.4);white-space:nowrap}
+#trends-tooltip{position:fixed;background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;pointer-events:none;z-index:var(--z-toast);display:none;box-shadow:0 8px 24px rgba(0,0,0,0.4);white-space:nowrap}
 #trends-tooltip .tt-brand{font-weight:700;margin-bottom:2px}
 #trends-tooltip .tt-val{color:var(--amber);font-weight:700}
 #trends-tooltip .tt-date{color:var(--hint);font-size:13px;margin-top:2px}
@@ -2956,7 +3109,7 @@ table.db-table tr:hover td{background:var(--surface2)}
 @media(max-width:600px){.kanban-board{grid-template-columns:1fr}}
 .kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);display:flex;flex-direction:column;min-height:420px;transition:var(--transition)}
 .kanban-col.drag-over{border-color:var(--amber);background:var(--amber-dim);box-shadow:0 0 0 2px rgba(245,166,35,0.2) inset}
-.kanban-col-hdr{padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);border-radius:var(--radius-md) var(--radius-md) 0 0;z-index:2}
+.kanban-col-hdr{padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);border-radius:var(--radius-md) var(--radius-md) 0 0;z-index:var(--z-base)}
 .kanban-col-title{font-size:13px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;color:var(--text);display:flex;align-items:center;gap:8px}
 .kanban-col-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:var(--surface3);color:var(--muted);font-size:13px;font-weight:700;border:1px solid var(--border2)}
 .kanban-col[data-col="ideas"] .kanban-col-title{color:var(--amber)}
@@ -3034,7 +3187,7 @@ table.db-table tr:hover td{background:var(--surface2)}
 .cal-side-title{font-size:12px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 .cal-legend{display:flex;flex-direction:column;gap:6px}
 /* ── Day Expanded Popover ──────────────────────────────────── */
-.cal-day-popover{position:fixed;background:var(--surface);border:1px solid var(--amber);border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,0.6),0 0 0 4px rgba(245,166,35,0.15);min-width:320px;max-width:420px;max-height:70vh;overflow-y:auto;z-index:250;display:none;animation:cal-popover-in .25s cubic-bezier(.34,1.56,.64,1)}
+.cal-day-popover{position:fixed;background:var(--surface);border:1px solid var(--amber);border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,0.6),0 0 0 4px rgba(245,166,35,0.15);min-width:320px;max-width:420px;max-height:70vh;overflow-y:auto;z-index:calc(var(--z-cmd-palette) + 50);display:none;animation:cal-popover-in .25s cubic-bezier(.34,1.56,.64,1)}
 .cal-day-popover.show{display:flex;flex-direction:column}
 @keyframes cal-popover-in{from{opacity:0;transform:scale(.85);transform-origin:center}to{opacity:1;transform:scale(1)}}
 .cal-popover-hdr{padding:16px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:linear-gradient(180deg,var(--amber-dim) 0%,transparent 100%);border-radius:13px 13px 0 0}
@@ -3063,11 +3216,11 @@ table.db-table tr:hover td{background:var(--surface2)}
 .cal-popover-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:20px 14px;font-style:italic}
 .cal-popover-add-btn{margin-top:10px;width:100%;background:none;border:1px dashed var(--border2);color:var(--muted);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:var(--transition)}
 .cal-popover-add-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
-.cal-popover-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px);z-index:249;display:none}
+.cal-popover-backdrop{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px);z-index:calc(var(--z-cmd-palette) + 49);display:none}
 .cal-popover-backdrop.show{display:block}
-.cal-day.cal-day-active{border-color:var(--amber)!important;box-shadow:0 0 0 2px var(--amber),0 6px 18px rgba(245,166,35,0.35)!important;transform:scale(1.05);z-index:5;background:var(--amber-dim)!important;transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
+.cal-day.cal-day-active{border-color:var(--amber)!important;box-shadow:0 0 0 2px var(--amber),0 6px 18px rgba(245,166,35,0.35)!important;transform:scale(1.05);z-index:var(--z-base);background:var(--amber-dim)!important;transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
 /* ── Calendar Add/Manage Modals ───────────────────────────── */
-.cal-modal-backdrop{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:300;align-items:center;justify-content:center;padding:20px;animation:cal-modal-fade .2s ease}
+.cal-modal-backdrop{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:var(--z-modal-backdrop);align-items:center;justify-content:center;padding:20px;animation:cal-modal-fade .2s ease}
 .cal-modal-backdrop.show{display:flex}
 @keyframes cal-modal-fade{from{opacity:0}to{opacity:1}}
 .cal-modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:460px;display:flex;flex-direction:column;max-height:85vh;box-shadow:0 20px 60px rgba(0,0,0,0.6);animation:cal-modal-slide .25s cubic-bezier(.4,0,.2,1)}
@@ -3193,7 +3346,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .dash-battle-delta.up{color:var(--green)}
 .dash-battle-delta.dn{color:var(--red)}
 .dash-battle-delta.eq{color:var(--hint)}
-.dash-summary-card{background:var(--surface);border:1px solid rgba(245,166,35,0.2);border-radius:var(--radius-md);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.dash-summary-card{background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--amber);border-radius:var(--radius-md);padding:14px 16px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
 .dash-summary-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text);line-height:1.55}
 .dash-summary-icon{font-size:14px;flex-shrink:0;margin-top:1px}
 .dash-summary-refresh{background:none;border:none;color:var(--hint);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;transition:var(--transition);margin-left:auto}
@@ -3201,12 +3354,12 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 /* ── Welcome Bonus Battle ───────────────────────────────── */
 .welcome-bonus-card{margin-top:18px}
 .welcome-bonus-controls{display:flex;gap:6px;margin:8px 0 12px;flex-wrap:wrap}
-.welcome-bonus-table{width:100%;border-collapse:collapse;font-size:13px}
+.welcome-bonus-table{width:100%;border-collapse:collapse;font-size:12.5px}
 .welcome-bonus-table th{text-align:left;padding:10px 12px;background:var(--surface2);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;border-bottom:1px solid var(--border)}
 .welcome-bonus-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
 .welcome-bonus-table tr:hover td{background:var(--surface2)}
 .welcome-bonus-table .wb-brand{font-weight:700;color:var(--text)}
-.welcome-bonus-table .wb-amount{font-weight:700;color:var(--amber);font-size:15px}
+.welcome-bonus-table .wb-amount{font-weight:700;color:var(--text);font-size:14px}
 .welcome-bonus-table .wb-pct{color:#6ee7b7;font-weight:600}
 .welcome-bonus-table .wb-fs{color:#a78bfa;font-weight:600;font-size:12px}
 .welcome-bonus-table .wb-conf{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px}
@@ -3217,9 +3370,9 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .welcome-bonus-disclaimer{margin-top:10px;font-size:11px;color:var(--muted);font-style:italic;line-height:1.55;padding:8px 10px;background:var(--surface2);border-left:2px solid var(--amber);border-radius:4px}
 .welcome-bonus-empty{padding:30px 20px;text-align:center;color:var(--hint);font-size:13px}
 /* SVG timeline tooltip */
-.timeline-tooltip{position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;color:var(--text);pointer-events:none;z-index:100;display:none;box-shadow:var(--shadow-md);min-width:140px}
+.timeline-tooltip{position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;color:var(--text);pointer-events:none;z-index:var(--z-floating);display:none;box-shadow:var(--shadow-md);min-width:140px}
 /* ── AI Chat Bubble ──────────────────────────────────────── */
-.chat-bubble{position:fixed;bottom:24px;right:24px;z-index:150}
+.chat-bubble{position:fixed;bottom:24px;right:24px;z-index:var(--z-floating)}
 .chat-fab{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--amber) 0%,#ffb84d 50%,#e0851a 100%);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 28px rgba(245,166,35,0.55),0 2px 10px rgba(0,0,0,0.5);transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s ease;position:relative;overflow:visible}
 .chat-fab::before{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(245,166,35,0.5);opacity:0;animation:chat-fab-ring 2.4s ease-out infinite;pointer-events:none}
 .chat-fab::after{content:'';position:absolute;inset:-10px;border-radius:50%;border:2px solid rgba(245,166,35,0.25);opacity:0;animation:chat-fab-ring 2.4s ease-out infinite .8s;pointer-events:none}
@@ -3227,7 +3380,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .chat-fab:hover{transform:scale(1.1) rotate(-4deg);box-shadow:0 8px 34px rgba(245,166,35,0.75),0 4px 14px rgba(0,0,0,0.5)}
 .chat-fab:active{transform:scale(0.96)}
 .chat-fab svg{pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.25))}
-.chat-fab-badge{position:absolute;top:-4px;right:-4px;width:20px;height:20px;background:var(--red);border-radius:50%;border:2px solid var(--bg);display:none;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;z-index:2}
+.chat-fab-badge{position:absolute;top:-4px;right:-4px;width:20px;height:20px;background:var(--red);border-radius:50%;border:2px solid var(--bg);display:none;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;z-index:var(--z-base)}
 .chat-fab-badge.show{display:flex}
 .chat-fab-label{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:#0b0d12;color:var(--amber);font-size:12px;font-weight:800;letter-spacing:1px;padding:3px 8px;border-radius:10px;border:1.5px solid var(--amber);box-shadow:0 2px 8px rgba(0,0,0,0.5);pointer-events:none;font-family:var(--font-mono,monospace)}
 .chat-fab-tooltip{position:absolute;right:calc(100% + 14px);top:50%;transform:translateY(-50%);background:var(--surface2);color:var(--text);font-size:12px;font-weight:600;padding:8px 12px;border-radius:8px;border:1px solid var(--border2);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;box-shadow:0 4px 14px rgba(0,0,0,0.4)}
@@ -3258,7 +3411,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .chat-send:hover{background:#e8952a}
 .chat-send:disabled{opacity:0.4;cursor:not-allowed}
 /* ── Global Search Overlay ───────────────────────────────── */
-.gsearch-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding-top:80px;backdrop-filter:blur(0px);pointer-events:none;opacity:0;transition:background .18s ease,opacity .18s ease,backdrop-filter .18s ease}
+.gsearch-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);z-index:var(--z-cmd-palette);display:flex;align-items:flex-start;justify-content:center;padding-top:80px;backdrop-filter:blur(0px);pointer-events:none;opacity:0;transition:background .18s ease,opacity .18s ease,backdrop-filter .18s ease}
 .gsearch-overlay.open{background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);pointer-events:auto;opacity:1}
 .gsearch-box{width:100%;max-width:600px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg)}
 .gsearch-input-row{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
@@ -3278,7 +3431,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .nav-help-btn{margin-left:6px;background:none;border:1px solid var(--border2);color:var(--muted);border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:var(--transition);font-family:var(--font);align-self:center;padding:0}
 .nav-help-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
 /* ── Quick View Hover ────────────────────────────────────── */
-.quick-view{position:fixed;z-index:120;width:280px;background:rgba(17,21,32,0.97);border:1px solid rgba(245,166,35,0.35);border-left:3px solid var(--amber);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 1px rgba(245,166,35,0.08);padding:12px 14px;display:none;font-size:13px;backdrop-filter:blur(8px)}
+.quick-view{position:fixed;z-index:var(--z-floating);width:280px;background:rgba(17,21,32,0.97);border:1px solid rgba(245,166,35,0.35);border-left:3px solid var(--amber);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 1px rgba(245,166,35,0.08);padding:12px 14px;display:none;font-size:13px;backdrop-filter:blur(8px)}
 .quick-view.show{display:block}
 .quick-view::before{content:'preview';position:absolute;top:-9px;left:12px;font-size:13px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--amber);background:rgba(17,21,32,0.97);padding:0 5px;border-radius:3px}
 .qv-copy{color:var(--text);line-height:1.65;margin-bottom:9px;max-height:120px;overflow:hidden}
@@ -3306,7 +3459,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .btn-help-skip:hover{color:var(--text)}
 
 /* Spotlight overlay */
-.spotlight-overlay{position:fixed;inset:0;z-index:300;pointer-events:none;opacity:0;transition:opacity .25s ease}
+.spotlight-overlay{position:fixed;inset:0;z-index:var(--z-modal-backdrop);pointer-events:none;opacity:0;transition:opacity .25s ease}
 .spotlight-overlay.active{opacity:1;pointer-events:auto}
 .spotlight-mask{position:absolute;inset:0;background:rgba(0,0,0,0.72)}
 .spotlight-hole{position:absolute;border-radius:12px;box-shadow:0 0 0 4px rgba(245,166,35,0.8),0 0 0 8px rgba(245,166,35,0.25),0 0 40px rgba(245,166,35,0.3);transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:none}
@@ -3324,9 +3477,9 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .btn-spot-skip:hover{color:var(--muted)}
 
 /* Help FAB + Drawer */
-.help-fab{position:fixed;bottom:24px;left:24px;z-index:140;width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border2);color:var(--muted);font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:var(--transition);font-family:var(--font)}
+.help-fab{position:fixed;bottom:24px;left:24px;z-index:var(--z-floating);width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border2);color:var(--muted);font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:var(--transition);font-family:var(--font)}
 .help-fab:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim);box-shadow:0 0 0 3px rgba(245,166,35,0.15)}
-.help-drawer{position:fixed;right:0;top:0;bottom:0;width:320px;background:var(--surface);border-left:1px solid var(--border2);box-shadow:-4px 0 24px rgba(0,0,0,0.35);z-index:240;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.help-drawer{position:fixed;right:0;top:0;bottom:0;width:320px;background:var(--surface);border-left:1px solid var(--border2);box-shadow:-4px 0 24px rgba(0,0,0,0.35);z-index:var(--z-drawer);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
 .help-drawer.open{transform:translateX(0)}
 .help-drawer-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
 .help-drawer-title{font-size:15px;font-weight:700;flex:1}
@@ -3345,14 +3498,14 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .help-shortcut kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-family:var(--mono);font-size:13px;color:var(--text)}
 .help-restart-btn{width:100%;background:none;border:1px solid var(--border2);color:var(--muted);border-radius:var(--radius-sm);padding:8px;font-size:13px;cursor:pointer;transition:var(--transition);font-family:var(--font);margin-top:4px}
 .help-restart-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
-.help-backdrop{position:fixed;inset:0;z-index:239;display:none}
+.help-backdrop{position:fixed;inset:0;z-index:calc(var(--z-drawer) - 1);display:none}
 .help-backdrop.show{display:block}
 .help-subsection{margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)}
 .help-subsection-title{font-size:12.5px;font-weight:700;color:var(--amber);margin-bottom:6px;letter-spacing:0.3px}
 .help-action-btn{width:100%;background:none;border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;cursor:pointer;transition:var(--transition);font-family:var(--font);margin-bottom:6px;text-align:left;display:flex;align-items:center;gap:8px}
 .help-action-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim);transform:translateX(2px)}
 /* ── Legend Modal ──────────────────────────────────────────── */
-.legend-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(5px);z-index:350;display:flex;align-items:center;justify-content:center;padding:24px;animation:legend-fade .25s ease}
+.legend-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(5px);z-index:var(--z-modal-backdrop);display:flex;align-items:center;justify-content:center;padding:24px;animation:legend-fade .25s ease}
 @keyframes legend-fade{from{opacity:0}to{opacity:1}}
 .legend-modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:720px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.7);animation:legend-slide .3s cubic-bezier(.34,1.56,.64,1)}
 @keyframes legend-slide{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -3378,7 +3531,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .legend-ftr{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}
 @media (max-width:640px){.legend-modal{max-width:100%;max-height:100vh;border-radius:0}.legend-symbol{min-width:60px}.legend-item{flex-direction:row;gap:10px;padding:10px 12px}}
 /* ── Training Course Modal ─────────────────────────────────── */
-.course-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);z-index:360;display:flex;align-items:center;justify-content:center;padding:20px;animation:legend-fade .25s ease}
+.course-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);z-index:var(--z-modal-backdrop);display:flex;align-items:center;justify-content:center;padding:20px;animation:legend-fade .25s ease}
 .course-modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:1100px;height:88vh;display:flex;flex-direction:column;box-shadow:0 30px 100px rgba(0,0,0,0.7);overflow:hidden}
 .course-hdr{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:18px;flex-shrink:0;background:linear-gradient(180deg,rgba(245,166,35,0.08) 0%,transparent 100%)}
 .course-title{font-size:18px;font-weight:800;letter-spacing:-0.4px;color:var(--text)}
@@ -3532,7 +3685,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 }
 
 /* ── Ad Preview Modal ────────────────────────────────────── */
-.ad-preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.ad-preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:var(--z-modal-backdrop);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
 .ad-preview-modal{background:var(--bg);border:1px solid var(--border);border-radius:14px;width:100%;max-width:520px;height:80vh;max-height:780px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
 .ad-preview-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--surface)}
 .ad-preview-title{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-0.2px}
@@ -3541,7 +3694,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .ad-preview-close:hover{background:var(--surface);color:var(--text)}
 .ad-preview-frame-wrap{flex:1;position:relative;background:#fff}
 .ad-preview-frame{width:100%;height:100%;border:0;display:block}
-.ad-preview-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;background:var(--surface);z-index:1}
+.ad-preview-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;background:var(--surface);z-index:var(--z-base)}
 .ad-preview-footer{padding:10px 18px;border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .ad-preview-open-tab{font-size:12px;color:var(--amber);text-decoration:none;border:1px solid var(--amber);padding:5px 10px;border-radius:6px}
 .ad-preview-open-tab:hover{background:var(--amber-dim)}
@@ -3555,9 +3708,9 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   .ad-preview-overlay{padding:0}
 }
 /* ── Playbook Modal ───────────────────────────────────────── */
-.playbook-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9100;display:flex;align-items:flex-start;justify-content:center;padding:20px;backdrop-filter:blur(4px);overflow-y:auto}
+.playbook-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:var(--z-modal-backdrop);display:flex;align-items:flex-start;justify-content:center;padding:20px;backdrop-filter:blur(4px);overflow-y:auto}
 .playbook-modal{background:var(--bg);border:1px solid var(--border);border-radius:14px;width:100%;max-width:820px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);margin:auto}
-.playbook-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:2}
+.playbook-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:var(--z-base)}
 .playbook-title{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-0.3px}
 .playbook-subtitle{font-size:12px;color:var(--muted);margin-top:2px}
 .playbook-actions{display:flex;gap:8px}
@@ -3605,7 +3758,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   .playbook-header{padding:14px 16px}
 }
 /* ── Shadow Network Graph ────────────────────────────────── */
-.netviz-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9050;display:flex;flex-direction:column;backdrop-filter:blur(4px)}
+.netviz-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:var(--z-modal-backdrop);display:flex;flex-direction:column;backdrop-filter:blur(4px)}
 .netviz-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface)}
 .netviz-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.2px}
 .netviz-subtitle{font-size:11.5px;color:var(--muted);margin-top:2px}
@@ -3641,7 +3794,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .netviz-legend-row{display:flex;align-items:center;gap:8px;margin:3px 0}
 .netviz-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .netviz-legend-line{width:24px;height:2px;flex-shrink:0}
-.netviz-zoom-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:4px;z-index:5}
+.netviz-zoom-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:4px;z-index:var(--z-base)}
 .netviz-zoom-btn{width:32px;height:32px;border:1px solid var(--border);background:rgba(11,13,18,0.85);color:var(--text);border-radius:6px;cursor:pointer;font-size:16px;backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center}
 .netviz-zoom-btn:hover{background:var(--surface)}
 .netviz-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:40px;gap:12px}
@@ -3746,7 +3899,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   #copy-cards.density-comfortable,#copy-cards.density-compact,#copy-cards.density-gallery{grid-template-columns:1fr;gap:10px}
 }
 /* ── Command Palette (Cmd+K) ──────────────────────────────── */
-.cmdk-overlay{position:fixed;inset:0;background:rgba(6,9,15,0.7);backdrop-filter:blur(6px);z-index:9500;display:none;align-items:flex-start;justify-content:center;padding-top:12vh;animation:cmdk-fade .15s ease}
+.cmdk-overlay{position:fixed;inset:0;background:rgba(6,9,15,0.7);backdrop-filter:blur(6px);z-index:var(--z-cmd-palette);display:none;align-items:flex-start;justify-content:center;padding-top:12vh;animation:cmdk-fade .15s ease}
 .cmdk-overlay.open{display:flex}
 @keyframes cmdk-fade{from{opacity:0}to{opacity:1}}
 .cmdk-modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:640px;box-shadow:0 24px 80px rgba(0,0,0,0.6);overflow:hidden;display:flex;flex-direction:column;max-height:75vh;animation:cmdk-up .18s ease}
@@ -3778,7 +3931,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 }
 
 /* ── Multi-select & Bulk Action Bar ───────────────────────── */
-.ms-checkbox{position:absolute;top:8px;left:8px;width:20px;height:20px;background:rgba(11,13,18,0.85);border:1.5px solid var(--border2);border-radius:5px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;transition:all 150ms ease;backdrop-filter:blur(4px)}
+.ms-checkbox{position:absolute;top:8px;left:8px;width:20px;height:20px;background:rgba(11,13,18,0.85);border:1.5px solid var(--border2);border-radius:5px;cursor:pointer;z-index:var(--z-base);display:flex;align-items:center;justify-content:center;transition:all 150ms ease;backdrop-filter:blur(4px)}
 .ms-checkbox:hover{border-color:var(--amber)}
 .ms-checkbox.checked{background:var(--amber);border-color:var(--amber);color:#0b0d12}
 .ms-checkbox.checked::after{content:'✓';font-size:13px;font-weight:700;color:#0b0d12}
@@ -3786,7 +3939,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .copy-card.ms-selected,.ad-item.ms-selected{box-shadow:0 0 0 2px var(--amber);border-color:var(--amber)!important}
 
 /* Bulk action bar (sticky bottom) */
-.bulk-bar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surface);border:1px solid var(--amber);border-radius:14px;padding:10px 14px;z-index:8500;display:flex;align-items:center;gap:8px;box-shadow:0 14px 50px rgba(0,0,0,0.5),0 0 0 4px rgba(245,166,35,0.12);transition:transform 250ms cubic-bezier(0.4,0,0.2,1);max-width:calc(100vw - 32px);flex-wrap:wrap}
+.bulk-bar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surface);border:1px solid var(--amber);border-radius:14px;padding:10px 14px;z-index:var(--z-toast);display:flex;align-items:center;gap:8px;box-shadow:0 14px 50px rgba(0,0,0,0.5),0 0 0 4px rgba(245,166,35,0.12);transition:transform 250ms cubic-bezier(0.4,0,0.2,1);max-width:calc(100vw - 32px);flex-wrap:wrap}
 .bulk-bar.show{transform:translateX(-50%) translateY(0)}
 .bulk-bar-count{font-size:13px;color:var(--text);font-weight:700;padding:5px 11px;background:rgba(245,166,35,0.18);border-radius:7px;letter-spacing:-0.2px;display:flex;align-items:center;gap:6px}
 .bulk-bar-count strong{color:var(--amber);font-size:14px}
@@ -3806,7 +3959,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 }
 
 /* Compare modal (multi-ad side-by-side) */
-.cmp-multi-overlay{position:fixed;inset:0;background:rgba(6,9,15,0.85);backdrop-filter:blur(5px);z-index:9300;display:none;align-items:center;justify-content:center;padding:20px}
+.cmp-multi-overlay{position:fixed;inset:0;background:rgba(6,9,15,0.85);backdrop-filter:blur(5px);z-index:var(--z-modal-backdrop);display:none;align-items:center;justify-content:center;padding:20px}
 .cmp-multi-overlay.open{display:flex}
 .cmp-multi-modal{background:var(--bg);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:1200px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6)}
 .cmp-multi-header{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--surface)}
@@ -3878,7 +4031,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .preset-save-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1px dashed var(--border);color:var(--muted);font-size:11.5px;padding:4px 10px;border-radius:7px;cursor:pointer;font-family:inherit;transition:all 150ms ease}
 .preset-save-btn:hover{border-color:var(--amber);color:var(--amber);border-style:solid}
 
-.preset-modal{position:fixed;inset:0;background:rgba(6,9,15,0.7);backdrop-filter:blur(6px);z-index:9400;display:none;align-items:center;justify-content:center;padding:20px}
+.preset-modal{position:fixed;inset:0;background:rgba(6,9,15,0.7);backdrop-filter:blur(6px);z-index:var(--z-modal-backdrop);display:none;align-items:center;justify-content:center;padding:20px}
 .preset-modal.open{display:flex}
 .preset-modal-inner{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:22px 24px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,0.6)}
 .preset-modal-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;letter-spacing:-0.2px}
@@ -3900,9 +4053,9 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .timewise-subtab.active{background:var(--amber);color:#0b0d12}
 
 /* ── Strategy drawer ────────────────────────────────────── */
-.strategy-drawer{position:fixed;right:-540px;top:0;height:100vh;width:520px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border2);box-shadow:-12px 0 40px rgba(0,0,0,0.6);z-index:91;display:flex;flex-direction:column;transition:right .28s cubic-bezier(0.4,0,0.2,1);overflow:hidden}
+.strategy-drawer{position:fixed;right:-540px;top:0;height:100vh;width:520px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border2);box-shadow:-12px 0 40px rgba(0,0,0,0.6);z-index:var(--z-drawer);display:flex;flex-direction:column;transition:right .28s cubic-bezier(0.4,0,0.2,1);overflow:hidden}
 .strategy-drawer.open{right:0}
-.strategy-drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:90;animation:swipe-fade .2s ease}
+.strategy-drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);z-index:calc(var(--z-drawer) - 1);animation:swipe-fade .2s ease}
 .strategy-drawer-backdrop.open{display:block}
 .strategy-drawer-header{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--bg)}
 .strategy-drawer-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.2px;display:flex;align-items:center;gap:8px}
@@ -3940,7 +4093,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .swipe-card:hover .swipe-item-edit-btn{display:flex}
 .swipe-item-edit-btn:hover{color:var(--amber);border-color:var(--amber)}
 
-.swipe-edit-modal{position:fixed;inset:0;background:rgba(6,9,15,0.7);backdrop-filter:blur(6px);z-index:9400;display:none;align-items:center;justify-content:center;padding:20px}
+.swipe-edit-modal{position:fixed;inset:0;background:rgba(6,9,15,0.7);backdrop-filter:blur(6px);z-index:var(--z-modal-backdrop);display:none;align-items:center;justify-content:center;padding:20px}
 .swipe-edit-modal.open{display:flex}
 .swipe-edit-modal-inner{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:20px 22px;width:100%;max-width:460px;box-shadow:0 24px 80px rgba(0,0,0,0.6)}
 .swipe-edit-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;letter-spacing:-0.2px}
@@ -3958,12 +4111,14 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 
 /* ── Nav "Още" Dropdown ──────────────────────────────────── */
 .nav-more{position:relative;cursor:pointer;user-select:none}
-.nav-more-menu{position:absolute;top:calc(100% + 2px);left:0;background:var(--surface);border:1px solid var(--border2);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,0.5);padding:6px;min-width:240px;display:none;z-index:200;animation:nav-more-in .15s ease}
+.nav-more-menu{position:absolute;top:calc(100% + 2px);left:0;background:var(--surface);border:1px solid var(--border2);border-radius:8px;box-shadow:var(--shadow-md);padding:6px;min-width:240px;display:none;z-index:var(--z-dropdown);animation:nav-more-in .15s ease}
 .nav-more.open .nav-more-menu{display:block}
 @keyframes nav-more-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.nav-more-item{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:7px;cursor:pointer;transition:background 100ms ease;color:var(--text)}
-.nav-more-item:hover{background:rgba(245,166,35,0.1)}
-.nav-more-icon{width:28px;height:28px;border-radius:7px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:var(--amber)}
+.nav-more-item{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:7px;cursor:pointer;transition:background 100ms ease;color:var(--text);background:transparent;border:none;width:100%;text-align:left;font-family:inherit;font-size:13px}
+.nav-more-item:hover{background:var(--surface2)}
+.nav-more-item.active{background:var(--surface3);color:var(--text)}
+.nav-more-item.active .nav-more-icon{color:var(--amber)}
+.nav-more-icon{width:28px;height:28px;border-radius:7px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:var(--muted)}
 .nav-more-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.2;letter-spacing:-0.1px}
 .nav-more-sub{font-size:11px;color:var(--muted);margin-top:1px}
 .nav-more-divider{height:1px;background:var(--border);margin:5px 4px}
@@ -3983,7 +4138,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .heatmap-day-label{display:flex;align-items:center;color:var(--muted);font-size:9.5px;height:14px;padding-right:4px;justify-content:flex-end}
 .heatmap-week-col{display:grid;grid-template-rows:repeat(7,14px);gap:3px}
 .heatmap-cell{width:100%;height:14px;border-radius:2px;background:rgba(245,166,35,0.08);transition:transform 100ms ease;cursor:pointer;border:1px solid transparent}
-.heatmap-cell:hover{transform:scale(1.4);border-color:var(--amber);z-index:5;position:relative}
+.heatmap-cell:hover{transform:scale(1.4);border-color:var(--amber);z-index:var(--z-base);position:relative}
 .heatmap-cell.lvl-0{background:#1a1f2e}
 .heatmap-cell.lvl-1{background:rgba(245,166,35,0.25)}
 .heatmap-cell.lvl-2{background:rgba(245,166,35,0.5)}
@@ -3997,17 +4152,17 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .heatmap-legend-cells span{width:12px;height:12px;border-radius:2px;display:block}
 .heatmap-stats{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 .heatmap-stats strong{color:var(--text);font-size:13px;letter-spacing:-0.2px}
-.heatmap-tooltip{position:fixed;background:var(--surface);border:1px solid var(--amber);border-radius:7px;padding:7px 11px;font-size:11.5px;color:var(--text);pointer-events:none;z-index:9999;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.5);white-space:nowrap;line-height:1.5}
+.heatmap-tooltip{position:fixed;background:var(--surface);border:1px solid var(--amber);border-radius:7px;padding:7px 11px;font-size:11.5px;color:var(--text);pointer-events:none;z-index:var(--z-toast);display:none;box-shadow:0 8px 24px rgba(0,0,0,0.5);white-space:nowrap;line-height:1.5}
 .heatmap-tooltip strong{color:var(--amber)}
 .heatmap-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6}
 @media (max-width:640px){
   .heatmap-grid{min-width:480px}
 }
 /* ── A/B Variant Inspector ────────────────────────────────── */
-.abv-overlay{position:fixed;inset:0;background:rgba(6,9,15,0.85);backdrop-filter:blur(6px);z-index:9300;display:none;align-items:flex-start;justify-content:center;padding:32px 20px;overflow-y:auto}
+.abv-overlay{position:fixed;inset:0;background:rgba(6,9,15,0.85);backdrop-filter:blur(6px);z-index:var(--z-modal-backdrop);display:none;align-items:flex-start;justify-content:center;padding:32px 20px;overflow-y:auto}
 .abv-overlay.open{display:flex}
 .abv-modal{background:var(--bg);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:1100px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);margin:auto}
-.abv-header{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:5}
+.abv-header{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:var(--z-base)}
 .abv-title{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.2px;display:flex;align-items:center;gap:8px}
 .abv-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .abv-sort{font-size:11.5px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;font-family:inherit;outline:none;cursor:pointer}
@@ -4040,7 +4195,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   .abv-overlay{padding:8px}
 }
 /* ── Onboarding Wizard ────────────────────────────────────── */
-.onb-overlay{position:fixed;inset:0;background:rgba(6,9,15,0.95);backdrop-filter:blur(8px);z-index:9700;display:none;align-items:center;justify-content:center;padding:20px}
+.onb-overlay{position:fixed;inset:0;background:rgba(6,9,15,0.95);backdrop-filter:blur(8px);z-index:var(--z-modal-backdrop);display:none;align-items:center;justify-content:center;padding:20px}
 .onb-overlay.open{display:flex;animation:onb-fade .3s ease}
 @keyframes onb-fade{from{opacity:0}to{opacity:1}}
 .onb-modal{background:linear-gradient(180deg,var(--surface),var(--bg));border:1px solid var(--amber);border-radius:18px;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 100px rgba(0,0,0,0.7),0 0 0 6px rgba(245,166,35,0.08);animation:onb-up .35s cubic-bezier(.34,1.56,.64,1)}
@@ -4090,20 +4245,13 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .onb-btn.primary:hover{background:#ff7a00}
 .onb-skip{background:none;border:0;color:var(--muted);font-size:11.5px;cursor:pointer;text-decoration:underline;font-family:inherit}
 .onb-skip:hover{color:var(--text)}
-.onb-tooltip{position:fixed;background:var(--surface);border:1px solid var(--amber);padding:8px 12px;border-radius:7px;font-size:11.5px;color:var(--text);max-width:280px;z-index:9800;display:none;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,0.5)}
-.onb-course-cta{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(245,166,35,0.12) 0%,rgba(224,133,26,0.06) 100%);border:1px solid rgba(245,166,35,0.4);border-radius:10px;padding:14px 16px;margin:12px 0 20px;cursor:pointer;transition:all 0.2s}
-.onb-course-cta:hover{background:linear-gradient(135deg,rgba(245,166,35,0.18) 0%,rgba(224,133,26,0.10) 100%);border-color:var(--amber);transform:translateY(-1px)}
-.onb-course-cta-icon{font-size:28px;flex-shrink:0}
-.onb-course-cta-text{flex:1}
-.onb-course-cta-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
-.onb-course-cta-sub{font-size:12px;color:var(--muted);line-height:1.45}
-.onb-course-cta-arrow{font-size:20px;color:var(--amber);font-weight:700;flex-shrink:0}
+.onb-tooltip{position:fixed;background:var(--surface);border:1px solid var(--amber);padding:8px 12px;border-radius:7px;font-size:11.5px;color:var(--text);max-width:280px;z-index:var(--z-toast);display:none;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,0.5)}
 /* ── Dashboard Customization ────────────────────────── */
-.dash-card-hide{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;opacity:0.5;z-index:2}
+.dash-card-hide{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;opacity:0.5;z-index:var(--z-base)}
 .dash-card-hide:hover{background:rgba(248,113,113,0.15);color:#f87171;border-color:#f87171;opacity:1;transform:rotate(90deg)}
 [data-dash-card]{position:relative}
 .user-menu-section-label{padding:6px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
-.card-mgr-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn 0.2s}
+.card-mgr-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:var(--z-modal-backdrop);animation:fadeIn 0.2s}
 .card-mgr-modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:92%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,0.5)}
 .card-mgr-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
 .card-mgr-title{font-size:16px;font-weight:700;color:var(--text)}
@@ -4121,11 +4269,37 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   .onb-action-btn{padding:12px 14px}
   .card-mgr-modal{width:96%;max-width:100%}
 }
+/* ── Error Tiers (Task 12) ── */
+.error-banner{display:flex;align-items:center;gap:12px;padding:12px 18px;background:linear-gradient(90deg,rgba(248,113,113,0.12),rgba(248,113,113,0.04));border:1px solid rgba(248,113,113,0.4);border-radius:10px;margin:10px 0;color:var(--text)}
+.error-banner-icon{font-size:18px;color:#f87171}
+.error-banner-msg{flex:1;font-size:13px;line-height:1.5}
+.error-banner-action{padding:6px 12px;background:#f87171;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.error-banner-close{background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px}
+.error-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:var(--z-modal-backdrop)}
+.error-modal{background:var(--surface);border:1px solid #f87171;border-radius:14px;width:92%;max-width:520px;padding:24px;box-shadow:0 30px 80px rgba(0,0,0,0.5)}
+.error-modal-title{font-size:17px;font-weight:700;color:#f87171;margin:0 0 8px;display:flex;align-items:center;gap:10px}
+.error-modal-msg{font-size:13.5px;color:var(--text);line-height:1.55;margin:0 0 12px}
+.error-modal-details{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:monospace;font-size:11.5px;color:var(--muted);max-height:200px;overflow:auto;margin:0 0 14px;white-space:pre-wrap;word-break:break-word}
+.error-modal-actions{display:flex;justify-content:flex-end;gap:8px}
+/* ── Help Drawer Accordion (Task 13) ── */
+.help-acc-section{border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;background:var(--surface)}
+.help-acc-header{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;transition:background 0.15s;background:transparent;border:0;width:100%;text-align:left;font:inherit;color:inherit;}
+.help-acc-header:hover{background:var(--surface2)}
+.help-acc-header.open{background:var(--surface2);border-bottom:1px solid var(--border)}
+.help-acc-icon{font-size:18px;flex-shrink:0}
+.help-acc-title{font-size:14px;font-weight:700;color:var(--text);flex-shrink:0}
+.help-acc-summary{font-size:12px;color:var(--muted);flex:1;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.help-acc-arrow{font-size:14px;color:var(--muted);transition:transform 0.2s}
+.help-acc-header.open .help-acc-arrow{transform:rotate(180deg)}
+.help-acc-body{display:none;padding:16px 18px 18px;font-size:13px;line-height:1.6;color:var(--text)}
+.help-acc-body.open{display:block}
+/* ── Cmd+K Section Headers (Task 14) ── */
+.cmdk-section-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;padding:10px 14px 6px}
 </style>
 </head>
 <body>
 <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Меню">☰</button>
-<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
+<button class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Затвори менюто" onclick="toggleSidebar(false)" type="button"></button>
 <div class="shell">
 
 <aside class="sidebar" id="sidebar">
@@ -4162,7 +4336,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   </div>
 
   <div class="section">
-    <button class="collapsible-toggle" onclick="toggleCol('api-b','api-a')"><span id="api-a">▶</span> API Tokens</button>
+    <button class="collapsible-toggle" aria-expanded="false" onclick="toggleCol('api-b','api-a')"><span id="api-a">▶</span> API Tokens</button>
     <div class="collapsible-body" id="api-b">
       <div class="section-label">Facebook Token</div>
       <div class="token-row">
@@ -4241,15 +4415,15 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
       </div>
     </div>
     <div class="chips" id="chips">
-      <div class="chip active" data-q="inbet" data-country="BG">Inbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip active" data-q="efbet" data-country="BG">Efbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip active" data-q="betano" data-country="BG">Betano<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip" data-q="winbet" data-country="BG">Winbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip" data-q="slybet" data-country="BG">SlyBet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip" data-q="calavera" data-country="BG">Calavera<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
-      <div class="chip" data-q="palms bet" data-country="BG">Palms Bet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <div class="chip active" data-q="inbet" data-country="BG">Inbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни" aria-label="Премахни бранд">×</button></div>
+      <div class="chip active" data-q="efbet" data-country="BG">Efbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни" aria-label="Премахни бранд">×</button></div>
+      <div class="chip active" data-q="betano" data-country="BG">Betano<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни" aria-label="Премахни бранд">×</button></div>
+      <div class="chip" data-q="winbet" data-country="BG">Winbet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни" aria-label="Премахни бранд">×</button></div>
+      <div class="chip" data-q="slybet" data-country="BG">SlyBet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни" aria-label="Премахни бранд">×</button></div>
+      <div class="chip" data-q="calavera" data-country="BG">Calavera<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни" aria-label="Премахни бранд">×</button></div>
+      <div class="chip" data-q="palms bet" data-country="BG">Palms Bet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни" aria-label="Премахни бранд">×</button></div>
       <!-- За да добавиш бранд от друга държава: data-country="RO" / "GR" / "RS" -->
-      <div class="chip" data-q="eurobet" data-country="BG">Eurobet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button></div>
+      <div class="chip" data-q="eurobet" data-country="BG">Eurobet<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни" aria-label="Премахни бранд">×</button></div>
     </div>
     <div class="custom-add">
       <input type="text" id="custom-q" placeholder="Добави бранд..." onkeydown="if(event.key==='Enter')addChip()" data-i18n-placeholder="sidebar.add-brand">
@@ -4268,7 +4442,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   </div>
 
   <div class="section">
-    <button class="collapsible-toggle" onclick="toggleCol('shadow-b','shadow-a')" title="Shadow акаунти = скрити Facebook страници които конкурентът използва за реклами под друго име. Тук добавяш ръчно открити такива."><span id="shadow-a">▶</span> Shadow Tracker <span style="color:var(--hint);font-size:12px">ⓘ</span></button>
+    <button class="collapsible-toggle" aria-expanded="false" onclick="toggleCol('shadow-b','shadow-a')" title="Shadow акаунти = скрити Facebook страници които конкурентът използва за реклами под друго име. Тук добавяш ръчно открити такива."><span id="shadow-a">▶</span> Shadow Tracker <span style="color:var(--hint);font-size:12px">ⓘ</span></button>
     <div class="collapsible-body" id="shadow-b">
       <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">Добави Page ID-та на известни shadow акаунти — ще се включат автоматично в всеки скан.</div>
       <div id="alias-section"><div style="font-size:13px;color:var(--hint)">Избери брандове от горе.</div></div>
@@ -4278,7 +4452,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 
 
   <div class="section">
-    <button class="collapsible-toggle" onclick="toggleCol('opt-b','opt-a')"><span id="opt-a">▶</span> <span data-i18n="sidebar.settings">Настройки</span></button>
+    <button class="collapsible-toggle" aria-expanded="false" onclick="toggleCol('opt-b','opt-a')"><span id="opt-a">▶</span> <span data-i18n="sidebar.settings">Настройки</span></button>
     <div class="collapsible-body" id="opt-b">
       <div class="section-label" data-i18n="sidebar.ad-count">Брой реклами</div>
       <select id="limit"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select>
@@ -4297,7 +4471,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
   </div>
 
   <div class="collapsible">
-    <button class="collapsible-toggle" onclick="toggleCol('priv-b','priv-a')"><span id="priv-a">▶</span> 🔒 Privacy & Security</button>
+    <button class="collapsible-toggle" aria-expanded="false" onclick="toggleCol('priv-b','priv-a')"><span id="priv-a">▶</span> 🔒 Privacy & Security</button>
     <div class="collapsible-body" id="priv-b">
       <div class="section-label">Защита на данни</div>
       <div style="font-size:12px;color:var(--hint);line-height:1.5;margin-bottom:8px">Токените и историята се пазят локално (localStorage). За B2B продажби се препоръчва криптиране и retention policy.</div>
@@ -4328,16 +4502,26 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 </aside>
 
 <main class="main">
-  <nav class="nav-tabs">
-    <div class="nav-tab active" id="navtab-dashboard" onclick="switchTab('dashboard')" data-i18n="nav.dashboard">Dashboard</div>
-    <div class="nav-tab" id="navtab-copy-lib" onclick="switchTab('copy-lib')" data-i18n="nav.copy-lib">Креативи</div>
-    <div class="nav-tab" onclick="switchTab('database')" id="nav-database" data-i18n="nav.boards">База <span id="db-online" style="display:none"><span class="realtime-dot"></span></span></div>
-    <div class="nav-tab" onclick="switchTab('alerts')" data-i18n="nav.alerts">Сигнали <span id="nav-alert-badge" style="display:none;background:var(--red);color:#fff;font-size:12px;padding:1px 6px;border-radius:9px;margin-left:4px;font-weight:700">0</span></div>
-    <div class="nav-tab" id="navtab-history" onclick="switchTab('history')" data-i18n="nav.history">⌛ История</div>
-    <div class="nav-tab" id="navtab-compare" onclick="switchTab('compare')" data-i18n="nav.compare">⇄ Сравнение</div>
-    <div class="nav-tab" id="navtab-trends" onclick="switchTab('trends')" data-i18n="nav.trends">📈 Тренди</div>
-    <div class="nav-tab" id="navtab-calendar" onclick="switchTab('calendar')" data-i18n="nav.calendar">📅 Календар</div>
-    <div class="nav-tab" id="navtab-strategy" onclick="switchTab('strategy')" data-i18n="nav.strategy">♟ Стратегия</div>
+  <nav class="nav-tabs" role="tablist">
+    <button type="button" class="nav-tab active" id="navtab-dashboard" onclick="switchTab('dashboard')" data-i18n="nav.dashboard" role="tab" aria-selected="true" aria-controls="tab-dashboard">Dashboard</button>
+    <button type="button" class="nav-tab" id="navtab-copy-lib" onclick="switchTab('copy-lib')" data-i18n="nav.copy-lib" role="tab" aria-selected="false" aria-controls="tab-copy-lib">Креативи</button>
+    <button type="button" class="nav-tab" id="navtab-trends" onclick="switchTab('trends')" data-i18n="nav.trends" role="tab" aria-selected="false" aria-controls="tab-trends">📈 Тренди</button>
+    <button type="button" class="nav-tab" id="navtab-alerts" onclick="switchTab('alerts')" data-i18n="nav.alerts" role="tab" aria-selected="false" aria-controls="tab-alerts">Сигнали <span id="nav-alert-badge" style="display:none;background:var(--red);color:#fff;font-size:12px;padding:1px 6px;border-radius:9px;margin-left:4px;font-weight:700">0</span></button>
+    <button type="button" class="nav-tab" id="navtab-calendar" onclick="switchTab('calendar')" data-i18n="nav.calendar" role="tab" aria-selected="false" aria-controls="tab-calendar">📅 Календар</button>
+    <button type="button" class="nav-tab nav-more" id="navtab-more" onclick="event.stopPropagation();toggleNavMore()" role="button" aria-haspopup="menu" aria-expanded="false">
+      Още <span style="font-size:10px;margin-left:2px">▾</span>
+      <div class="nav-more-menu" id="more-menu">
+        <button type="button" class="nav-more-item" onclick="event.stopPropagation();closeNavMore();switchTab('history')">⌛ <span class="nav-more-title">История</span></button>
+        <button type="button" class="nav-more-item" onclick="event.stopPropagation();closeNavMore();switchTab('compare')">⇄ <span class="nav-more-title">Сравнение</span></button>
+        <button type="button" class="nav-more-item" onclick="event.stopPropagation();closeNavMore();switchTab('strategy')">♟ <span class="nav-more-title">Стратегия</span></button>
+        <button type="button" class="nav-more-item" onclick="event.stopPropagation();closeNavMore();switchTab('database')">🗄 <span class="nav-more-title">База</span> <span id="db-online" style="display:none;margin-left:4px"><span class="realtime-dot"></span></span></button>
+      </div>
+    </div>
+    <!-- Hidden nav anchors (for switchTab active class lookup) -->
+    <span id="navtab-history" style="display:none"></span>
+    <span id="navtab-compare" style="display:none"></span>
+    <span id="navtab-strategy" style="display:none"></span>
+    <span id="nav-database" style="display:none"></span>
     <button class="nav-search-btn" onclick="openCmdK()" title="Команден панел (⌘K)">⌘K</button>
     <button class="nav-search-btn" onclick="openGSearch()" title="Търси в рекламите (глобално)">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -4404,9 +4588,9 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
     </div>
     <!-- TODO: Future enhancement — show/hide columns picker -->
     <div data-dash-card="metrics-row" style="display:none;position:relative" id="metrics-row-wrapper">
-      <button class="dash-card-hide" onclick="hideDashCard('metrics-row')" title="Скрий метриките">×</button>
+      <button class="dash-card-hide" onclick="hideDashCard('metrics-row')" title="Скрий метриките" aria-label="Скрий тази карта">×</button>
       <div id="metrics-row" class="metrics-row">
-      <div class="metric">
+      <div class="metric metric-primary">
         <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
         <div class="metric-info-bubble">
           <strong>Какво измерва</strong>
@@ -4921,7 +5105,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
     <div class="cal-day-popover" id="cal-day-popover"></div>
 
     <!-- Add Event Modal -->
-    <div class="cal-modal-backdrop" id="cal-add-modal" onclick="if(event.target===this)closeCalAddModal()">
+    <div class="cal-modal-backdrop" id="cal-add-modal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeCalAddModal()">
       <div class="cal-modal">
         <div class="cal-modal-hdr">
           <div class="cal-modal-title">Добави събитие</div>
@@ -4964,7 +5148,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
     </div>
 
     <!-- Manage Events Modal -->
-    <div class="cal-modal-backdrop" id="cal-manage-modal" onclick="if(event.target===this)closeCalManageModal()">
+    <div class="cal-modal-backdrop" id="cal-manage-modal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeCalManageModal()">
       <div class="cal-modal" style="max-width:560px">
         <div class="cal-modal-hdr">
           <div class="cal-modal-title">Управление на събитията</div>
@@ -5079,7 +5263,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 </div>
 
 <!-- Auth Modal -->
-<div class="modal-overlay" id="auth-modal" onclick="if(event.target===this)closeAuth()">
+<div class="modal-overlay" id="auth-modal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeAuth()">
   <div class="modal" style="position:relative">
     <button onclick="closeAuth()" class="modal-close-x" aria-label="Затвори" title="Затвори (Esc)">×</button>
     <div class="modal-title" id="auth-title">Вход в екипа</div>
@@ -5123,6 +5307,7 @@ function waitForSupabaseCDN(cb,tries=0){
   setTimeout(()=>waitForSupabaseCDN(cb,tries+1),100);
 }
 window.onload=()=>{
+  try{applySidebarState();}catch(e){console.warn('[init] applySidebarState failed',e);}
   try{
     const s=localStorage.getItem('ads-intel-v2');
     let d={};
@@ -5170,8 +5355,44 @@ window.onload=()=>{
     if(typeof loadAutoScanData==='function')loadAutoScanData();
   }catch(e){
     console.error('[init] fatal init error:',e);
-    toast('Грешка при стартиране — провери конзолата','error');
+    if(typeof showErrorModal==='function'){
+      showErrorModal({
+        title:'Грешка при стартиране',
+        message:'Приложението не успя да се инициализира. Можеш да копираш детайлите по-долу и да ги изпратиш за помощ.',
+        details:(e&&(e.stack||e.message))?String(e.stack||e.message):String(e),
+        copyable:true
+      });
+    }else{
+      toast('Грешка при стартиране — провери конзолата','error');
+    }
   }
+  // Setup tab keyboard navigation
+  (function setupTabKeyboard(){
+    const tablist=document.querySelector('.nav-tabs[role="tablist"]')||document.querySelector('.nav-tabs');
+    if(!tablist)return;
+    // Initial roving tabindex: only active tab gets 0
+    const updateTabindex=()=>{
+      const tabs=tablist.querySelectorAll('.nav-tab[role="tab"]');
+      tabs.forEach(t=>t.setAttribute('tabindex',t.classList.contains('active')?'0':'-1'));
+    };
+    updateTabindex();
+    tablist.addEventListener('keydown',(e)=>{
+      if(!['ArrowLeft','ArrowRight','Home','End','Enter',' '].includes(e.key))return;
+      const tabs=Array.from(tablist.querySelectorAll('.nav-tab[role="tab"]')).filter(t=>t.offsetParent!==null);
+      const idx=tabs.indexOf(document.activeElement);
+      if(idx<0)return;
+      let target=null;
+      if(e.key==='ArrowRight')target=tabs[(idx+1)%tabs.length];
+      else if(e.key==='ArrowLeft')target=tabs[(idx-1+tabs.length)%tabs.length];
+      else if(e.key==='Home')target=tabs[0];
+      else if(e.key==='End')target=tabs[tabs.length-1];
+      else if(e.key==='Enter'||e.key===' '){e.preventDefault();document.activeElement.click();return;}
+      if(target){e.preventDefault();target.focus();target.click();updateTabindex();}
+    });
+    // Update tabindex whenever switchTab runs
+    const orig=window.switchTab;
+    if(orig){window.switchTab=function(){const r=orig.apply(this,arguments);updateTabindex();return r;};}
+  })();
 };
 // ── Auto-scan integration: pull server-side scan results from data/latest.json ──
 async function loadAutoScanData(){
@@ -5214,7 +5435,36 @@ function applyStrictMode(){
   // Ако имаме резултати, ререндираме dash само за визуализацията
   if(window.results&&window.results.length)renderDash(window.results);
 }
-function toggleCol(bid,aid){const b=document.getElementById(bid),a=document.getElementById(aid);b.classList.toggle('open');a.textContent=b.classList.contains('open')?'▼':'▶';}
+const SIDEBAR_STATE_KEY='ads-intel-sidebar-state';
+function getSidebarState(){try{return JSON.parse(localStorage.getItem(SIDEBAR_STATE_KEY)||'{}');}catch(e){return{};}}
+function setSidebarState(s){try{localStorage.setItem(SIDEBAR_STATE_KEY,JSON.stringify(s));}catch(e){}}
+function toggleCol(bid,aid){
+  const b=document.getElementById(bid),a=document.getElementById(aid);
+  if(!b)return;
+  b.classList.toggle('open');
+  const isOpen=b.classList.contains('open');
+  if(a)a.textContent=isOpen?'▼':'▶';
+  const st=getSidebarState();st[bid]=isOpen?'open':'closed';setSidebarState(st);
+  // Update aria-expanded on toggle button
+  const toggleBtn=document.querySelector(`[onclick*="toggleCol('${bid}'"]`);
+  if(toggleBtn)toggleBtn.setAttribute('aria-expanded',String(isOpen));
+}
+function applySidebarState(){
+  const state=getSidebarState();
+  document.querySelectorAll('.collapsible-body').forEach(body=>{
+    const id=body.id;if(!id)return;
+    const isOpen=state[id]==='open'; // default closed
+    body.classList.toggle('open',isOpen);
+    // Find arrow span — pattern: toggleCol('xxx-b','xxx-a')
+    const btn=document.querySelector(`[onclick*="toggleCol('${id}'"]`);
+    if(btn){
+      const arrow=btn.querySelector('span');
+      if(arrow&&(arrow.textContent==='▶'||arrow.textContent==='▼'))arrow.textContent=isOpen?'▼':'▶';
+      // Update aria-expanded
+      btn.setAttribute('aria-expanded',String(isOpen));
+    }
+  });
+}
 function toggleVis(id){const e=document.getElementById(id);e.type=e.type==='password'?'text':'password';}
 // Read chip brand name without the × button text
 function chipText(c){
@@ -5266,7 +5516,7 @@ function addChip(){
   c.className='chip active';
   c.dataset.q=q;
   c.dataset.country=document.getElementById('country').value;
-  c.innerHTML=`${v.replace(/[<>]/g,'')}<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни">×</button>`;
+  c.innerHTML=`${v.replace(/[<>]/g,'')}<button class="chip-rm" onclick="event.stopPropagation();removeChip(this)" title="Премахни" aria-label="Премахни бранд">×</button>`;
   c.onclick=()=>{c.classList.toggle('active');updateRunSummary();renderAliasSection();};
   document.getElementById('chips').appendChild(c);
   i.value='';updateRunSummary();renderAliasSection();updateChipsCounter();toast('Брандът е добавен','success');
@@ -5762,11 +6012,20 @@ function switchTab(id){
   // Strategy still opens as side drawer (Kanban panel)
   if(id==='strategy'){openStrategyDrawer();return;}
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>{t.classList.remove('active');t.setAttribute('aria-selected','false');});
   const tabEl=document.getElementById('tab-'+id);
   if(tabEl)tabEl.classList.add('active');
   const navEl=document.getElementById('navtab-'+id)||document.getElementById('nav-'+id);
-  if(navEl)navEl.classList.add('active');
+  if(navEl){navEl.classList.add('active');navEl.setAttribute('aria-selected','true');}
+  // If selected tab lives inside the "Още" dropdown, mark Още as active
+  const moreIds=['history','compare','strategy','database'];
+  const moreEl=document.getElementById('navtab-more');
+  if(moreEl){moreEl.classList.toggle('active',moreIds.includes(id));moreEl.setAttribute('aria-selected',moreIds.includes(id)?'true':'false');}
+  // Auto-close mobile sidebar on tab switch
+  if(window.innerWidth<=900){
+    document.getElementById('sidebar')?.classList.remove('open');
+    document.getElementById('sidebar-backdrop')?.classList.remove('show');
+  }
   if(id==='copy-lib'&&results.length)renderCopyLib(results);
   if(id==='database')loadDBTab();
   if(id==='calendar'&&typeof renderCalendarTab==='function')renderCalendarTab();
@@ -5783,9 +6042,14 @@ function toggleNavMore(){
   const el=document.getElementById('navtab-more');
   if(!el)return;
   el.classList.toggle('open');
+  el.setAttribute('aria-expanded',el.classList.contains('open')?'true':'false');
 }
 function closeNavMore(){
-  document.getElementById('navtab-more')?.classList.remove('open');
+  const el=document.getElementById('navtab-more');
+  if(el){
+    el.classList.remove('open');
+    el.setAttribute('aria-expanded','false');
+  }
 }
 // Close when clicking elsewhere
 document.addEventListener('click',(e)=>{
@@ -5829,6 +6093,101 @@ function closeStrategyDrawer(){
   document.getElementById('strategy-drawer-backdrop')?.classList.remove('open');
 }
 function toast(msg,type='error'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),3500);}
+
+// ── Modal focus trap utility ──
+function trapFocus(modalEl,onClose){
+  const FOCUSABLE='button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const focusable=()=>Array.from(modalEl.querySelectorAll(FOCUSABLE)).filter(el=>el.offsetParent!==null);
+  const handler=(e)=>{
+    if(e.key==='Escape'){e.preventDefault();onClose&&onClose();return;}
+    if(e.key!=='Tab')return;
+    const els=focusable();if(!els.length)return;
+    const first=els[0],last=els[els.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  };
+  modalEl.addEventListener('keydown',handler);
+  const prevFocus=document.activeElement;
+  setTimeout(()=>{const els=focusable();if(els.length)els[0].focus();},50);
+  return ()=>{modalEl.removeEventListener('keydown',handler);try{prevFocus&&prevFocus.focus&&prevFocus.focus();}catch{}};
+}
+
+// ── Error Tier System (Task 12) ──
+// TIER 1: toast(msg,'error') — transient (existing)
+// TIER 2: showErrorBanner(opts) — persistent inline banner with action
+// TIER 3: showErrorModal(opts) — blocking modal for fatal errors
+function showErrorBanner(opts){
+  const o=opts||{};
+  let host=document.getElementById('error-banner-host');
+  if(!host){
+    host=document.createElement('div');
+    host.id='error-banner-host';
+    host.style.cssText='max-width:1200px;margin:0 auto;padding:0 16px;position:relative;z-index:var(--z-sticky)';
+    // Insert above main shell content
+    const shell=document.querySelector('.shell')||document.body;
+    if(shell.parentNode)shell.parentNode.insertBefore(host,shell);
+    else document.body.insertBefore(host,document.body.firstChild);
+  }
+  const id='eb-'+Date.now()+'-'+Math.floor(Math.random()*1000);
+  const el=document.createElement('div');
+  el.className='error-banner';
+  el.id=id;
+  el.setAttribute('role','alert');
+  el.setAttribute('aria-live','assertive');
+  const dismiss=o.dismissible!==false;
+  el.innerHTML=`
+    <span class="error-banner-icon">⚠</span>
+    <span class="error-banner-msg">${(o.message||'Грешка').replace(/[<>]/g,c=>({'<':'&lt;','>':'&gt;'})[c])}</span>
+    ${o.actionLabel?`<button class="error-banner-action" data-eb-action>${o.actionLabel}</button>`:''}
+    ${dismiss?`<button class="error-banner-close" data-eb-close aria-label="Затвори">×</button>`:''}
+  `;
+  if(o.action){
+    el.querySelector('[data-eb-action]')?.addEventListener('click',()=>{try{o.action();}catch(e){console.error(e);}if(o.closeOnAction!==false)el.remove();});
+  }
+  el.querySelector('[data-eb-close]')?.addEventListener('click',()=>el.remove());
+  host.appendChild(el);
+  return id;
+}
+
+function showErrorModal(opts){
+  const o=opts||{};
+  const existing=document.getElementById('error-modal-overlay');
+  if(existing)existing.remove();
+  const overlay=document.createElement('div');
+  overlay.className='error-modal-overlay';
+  overlay.id='error-modal-overlay';
+  const detailsBlock=o.details?`<pre class="error-modal-details" id="error-modal-details">${String(o.details).replace(/[<>]/g,c=>({'<':'&lt;','>':'&gt;'})[c])}</pre>`:'';
+  const copyBtn=(o.copyable!==false&&o.details)?`<button class="onb-btn" data-em-copy>📋 Копирай детайли</button>`:'';
+  overlay.innerHTML=`
+    <div class="error-modal" role="alertdialog" aria-modal="true" aria-labelledby="error-modal-title">
+      <div class="error-modal-title" id="error-modal-title">⚠ ${(o.title||'Сериозна грешка').replace(/[<>]/g,c=>({'<':'&lt;','>':'&gt;'})[c])}</div>
+      <div class="error-modal-msg">${(o.message||'').replace(/[<>]/g,c=>({'<':'&lt;','>':'&gt;'})[c])}</div>
+      ${detailsBlock}
+      <div class="error-modal-actions">
+        ${copyBtn}
+        <button class="onb-btn primary" data-em-close>Затвори</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const closeModal=()=>overlay.remove();
+  overlay.querySelector('[data-em-close]')?.addEventListener('click',closeModal);
+  overlay.querySelector('[data-em-copy]')?.addEventListener('click',()=>{
+    try{navigator.clipboard.writeText(String(o.details||''));toast('Копирано','success');}catch{}
+  });
+  overlay.addEventListener('click',e=>{if(e.target===overlay)closeModal();});
+  const release=trapFocus(overlay,closeModal);
+  overlay._releaseFocus=release;
+  return overlay;
+}
+
+function scrollToApiTokens(){
+  // Try to find API tokens section and scroll to it
+  const target=document.getElementById('fb-token')||document.querySelector('[data-section="api-tokens"]')||document.getElementById('api-tokens');
+  if(target){
+    target.scrollIntoView({behavior:'smooth',block:'center'});
+    if(target.tagName==='INPUT')setTimeout(()=>target.focus(),400);
+  }
+}
 
 // ── Ad Preview ─────────────────────────────────────────────
 // Meta блокира iframe embedding (X-Frame-Options: DENY) — отваряме директно в нов попъп прозорец
@@ -6106,7 +6465,7 @@ function purgeAllData(){
 
 function openDPAModal(){
   const html=`
-    <div id="dpa-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeDPAModal()">
+    <div id="dpa-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:var(--z-modal-backdrop);display:flex;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeDPAModal()">
       <div style="background:var(--surface);border:1px solid var(--border2);border-radius:14px;max-width:520px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
         <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
           <div style="font-size:16px;font-weight:700;flex:1">🔒 Data Processing Disclosure</div>
@@ -6532,7 +6891,7 @@ function renderBenchmarksPanel(){
   const collapsed=localStorage.getItem('ads-intel-bm-collapsed')==='1';
   container.innerHTML=`
     <div class="benchmarks-panel" style="position:relative">
-      <button class="dash-card-hide" onclick="hideDashCard('benchmarks')" title="Скрий">×</button>
+      <button class="dash-card-hide" onclick="hideDashCard('benchmarks')" title="Скрий" aria-label="Скрий тази карта">×</button>
       <div class="benchmarks-header">
         <div class="benchmarks-title">
           <div class="benchmarks-title-icon">📊</div>
@@ -6947,7 +7306,7 @@ function renderDash(res){
   // Dashboard v2: v2Top is prepended to brand cards html at the bottom of this function
   const v2Top=`
     <div class="dash-timeline-card" data-dash-card="dash-timeline">
-      <button class="dash-card-hide" onclick="hideDashCard('dash-timeline')" title="Скрий">×</button>
+      <button class="dash-card-hide" onclick="hideDashCard('dash-timeline')" title="Скрий" aria-label="Скрий тази карта">×</button>
       <div class="dash-section-title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         АКТИВНОСТ ПО ДНИ — 30 скана
@@ -8513,6 +8872,12 @@ h3{font-size:14px;color:#444;margin-top:16px}
 .report-summary-card,.report-bm-card{background:#fafafa;border:1px solid #ddd;border-left:3px solid #f5a623;padding:10px 14px;border-radius:6px}
 .report-summary-val,.report-bm-val{font-size:22px;font-weight:700;color:#222;letter-spacing:-0.4px}
 @media print{body{margin:0;padding:14px;max-width:100%}h1,h2{break-after:avoid}.report-table{font-size:11px}}
+/* Focus rings for keyboard navigation */
+.nav-tab:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:6px;}
+.nav-more-item:focus-visible{outline:2px solid var(--amber);outline-offset:-2px;}
+.help-acc-header:focus-visible{outline:2px solid var(--amber);outline-offset:-2px;}
+.collapsible-toggle:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:6px;}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
 </style>
 </head><body>${body}</body></html>`;
   const blob=new Blob([fullDoc],{type:'text/html;charset=utf-8'});
@@ -8938,6 +9303,15 @@ async function run(){
     const firstErr=errors[0]?.msg||'Неизвестна грешка';
     if(typeof toast==='function')toast('Анализът се провали — '+firstErr.substring(0,80),'error');
   }
+  // TIER 2 banner for FB token expiry
+  if(allFailed&&isToken&&typeof showErrorBanner==='function'){
+    showErrorBanner({
+      message:'Facebook token-ът е невалиден или изтекъл. Поднови го от Graph API Explorer и опитай пак.',
+      action:scrollToApiTokens,
+      actionLabel:'Поднови token',
+      dismissible:true
+    });
+  }
   if(allFailed&&(isPerm||isToken||isGeneric)){
     const helpHtml=isPerm?`
       <div style="background:var(--surface);border:1px solid var(--red);border-radius:9px;padding:18px;margin-bottom:16px">
@@ -9021,7 +9395,12 @@ async function run(){
   }
   }catch(fatalErr){
     console.error('[run] fatal error:',fatalErr);
-    if(typeof toast==='function')toast('Критична грешка: '+(fatalErr.message||fatalErr).toString().substring(0,100),'error');
+    showErrorModal({
+      title:'Критична грешка при анализа',
+      message:'Анализът прекъсна с фатална грешка. Можеш да опиташ отново или да копираш детайлите за дебъг.',
+      details:(fatalErr.stack||String(fatalErr)).substring(0,2000),
+      copyable:true
+    });
     try{
       const dc=document.getElementById('dash-content');
       if(dc){
@@ -9216,10 +9595,19 @@ function showLoginArea(){
 
 function showAuth(){
   if(!sbClient){toast('Първо въведи Supabase URL и Key и натисни "Свържи Supabase"');return;}
-  document.getElementById('auth-modal').classList.add('show');
+  const modalEl=document.getElementById('auth-modal');
+  modalEl.classList.add('show');
+  if(!modalEl._releaseFocus){
+    const release=trapFocus(modalEl,closeAuth);
+    modalEl._releaseFocus=release;
+  }
   toggleAuthMode('login');
 }
-function closeAuth(){document.getElementById('auth-modal').classList.remove('show');}
+function closeAuth(){
+  const modalEl=document.getElementById('auth-modal');
+  if(modalEl&&modalEl._releaseFocus)modalEl._releaseFocus();
+  modalEl.classList.remove('show');
+}
 function toggleAuthMode(mode){
   document.getElementById('auth-form-login').style.display=mode==='login'?'block':'none';
   document.getElementById('auth-form-register').style.display=mode==='register'?'block':'none';
@@ -11603,11 +11991,17 @@ function openCalAddModal(){
   document.getElementById('cal-add-name').value='';
   document.getElementById('cal-add-icon').value='';
   modal.classList.add('show');
+  if(!modal._releaseFocus){
+    const release=trapFocus(modal,closeCalAddModal);
+    modal._releaseFocus=release;
+  }
   setTimeout(()=>document.getElementById('cal-add-name')?.focus(),50);
 }
 
 function closeCalAddModal(){
-  document.getElementById('cal-add-modal')?.classList.remove('show');
+  const modal=document.getElementById('cal-add-modal');
+  if(modal&&modal._releaseFocus)modal._releaseFocus();
+  modal?.classList.remove('show');
 }
 
 function saveCalAddEvent(){
@@ -11635,11 +12029,18 @@ function saveCalAddEvent(){
 // ── Manage Events Modal ──
 function openCalManageModal(){
   renderUserEventsList();
-  document.getElementById('cal-manage-modal')?.classList.add('show');
+  const modal=document.getElementById('cal-manage-modal');
+  modal?.classList.add('show');
+  if(!modal._releaseFocus){
+    const release=trapFocus(modal,closeCalManageModal);
+    modal._releaseFocus=release;
+  }
 }
 
 function closeCalManageModal(){
-  document.getElementById('cal-manage-modal')?.classList.remove('show');
+  const modal=document.getElementById('cal-manage-modal');
+  if(modal&&modal._releaseFocus)modal._releaseFocus();
+  modal?.classList.remove('show');
 }
 
 function renderUserEventsList(){
@@ -12590,7 +12991,20 @@ function initAutoScan(){
       if(btn&&btn.disabled){return;}
       // Skip if no FB token
       const fb=document.getElementById('fb-token')?.value?.trim();
-      if(!fb){if(status)status.textContent='Скан пропуснат — липсва FB токен';return;}
+      if(!fb){
+        if(status)status.textContent='Скан пропуснат — липсва FB токен';
+        // TIER 2 banner: auto-scan token expiry/missing
+        if(typeof showErrorBanner==='function'&&!window._autoScanBannerShown){
+          window._autoScanBannerShown=true;
+          showErrorBanner({
+            message:'Автоматичният скан е пропуснат — Facebook token-ът липсва или е изтекъл. Поднови го за да продължи мониторингът.',
+            action:scrollToApiTokens,
+            actionLabel:'Поднови token',
+            dismissible:true
+          });
+        }
+        return;
+      }
       console.log('[auto-scan] firing scheduled scan');
       try{
         if(typeof run==='function'){run();}
@@ -13457,32 +13871,32 @@ function buildCmdkItems(query){
     });
   }
 
-  // Action commands
+  // Action commands — Task 14: each has a `category` (navigation|actions|settings|help)
   const actions=[
-    {id:'analyze',label:'▶ Анализирай',sub:'Стартирай скан',keywords:'run scan analyze анализ',action:()=>{const b=document.getElementById('run-btn')||document.querySelector('[onclick*="run()"]');if(b&&!b.disabled)b.click();}},
-    {id:'save-scan',label:'💾 Запази скан',sub:'Запази текущия скан в история',keywords:'save scan запази',action:()=>{const b=document.getElementById('btn-save');if(b)b.click();}},
-    {id:'welcome-bonus',label:'💰 Welcome Bonus Battle',sub:'Скрол до сравнение на бонуси',keywords:'bonus welcome бонус',action:()=>{document.getElementById('welcome-bonus-card')?.scrollIntoView({behavior:'smooth',block:'start'});}},
-    {id:'export',label:'⬇ Експорт',sub:'Свали отчет',keywords:'export download свали отчет',action:()=>{const b=document.getElementById('btn-export');if(b)b.click();}},
-    {id:'full-report',label:'📊 Пълен отчет',sub:'Печатаем HTML/PDF отчет на цялата сесия',keywords:'report отчет full pdf print',action:()=>{if(typeof openFullReportModal==='function')openFullReportModal();}},
-    {id:'ai-analyze',label:'✨ AI Анализ',sub:'Пълен Claude анализ',keywords:'ai claude analyze анализ',action:()=>{if(typeof runAI==='function'&&window.results)runAI(window.results,document.getElementById('claude-token').value.trim());}},
-    {id:'focus',label:'◉ Focus Mode',sub:'Покажи само winners',keywords:'focus mode',action:()=>{if(typeof toggleFocusMode==='function')toggleFocusMode();}},
-    {id:'course',label:'🎓 Курс',sub:'Обучителен курс',keywords:'course tutorial курс обучение',action:()=>{if(typeof openCourseModal==='function')openCourseModal();}},
-    {id:'legend',label:'📖 Легенда',sub:'Всички означения',keywords:'legend symbols легенда',action:()=>{if(typeof openLegendModal==='function')openLegendModal();}},
-    {id:'theme',label:'🌓 Превключи тема',sub:'Тъмна / Светла',keywords:'theme dark light тема',action:()=>{if(typeof toggleTheme==='function')toggleTheme();}},
-    {id:'help',label:'? Помощ',sub:'Help drawer',keywords:'help помощ',action:()=>{if(typeof toggleHelpDrawer==='function')toggleHelpDrawer();}},
-    {id:'search',label:'🔍 Глобално търсене',sub:'Open search overlay',keywords:'search търси',action:()=>{closeCmdK();if(typeof openGSearch==='function')setTimeout(openGSearch,100);}},
-    {id:'export-data',label:'📤 Експорт всички данни',sub:'GDPR data export',keywords:'export gdpr данни',action:()=>{if(typeof exportAllData==='function')exportAllData();}},
-    {id:'abv',label:'🧪 A/B Variant Inspector',sub:'Преглед на детектирани A/B клъстери',keywords:'ab variant test split',action:()=>{if(typeof openAbvInspector==='function')openAbvInspector();}},
-    {id:'dash-detailed',label:'📊 Изглед: Detailed',sub:'Всички карти видими',keywords:'view layout detailed all карти',action:()=>applyDashPreset('detailed')},
-    {id:'dash-compact',label:'⚡ Изглед: Compact',sub:'Само KPI и AI',keywords:'view layout compact карти',action:()=>applyDashPreset('compact')},
-    {id:'dash-igaming',label:'💰 Изглед: iGaming Focus',sub:'Бонуси + бранд активност',keywords:'view layout igaming карти',action:()=>applyDashPreset('igaming')},
-    {id:'dash-cards',label:'📋 Управление на карти',sub:'Покажи/скрий dashboard карти',keywords:'manage cards layout карти',action:()=>openCardManagerModal()},
-    {id:'onboarding',label:'👋 Покажи onboarding',sub:'Преразгледай wizard-а за първо влизане',keywords:'onboarding wizard tour помощ начало',action:()=>{localStorage.removeItem('ads-intel-onboarding-done');if(typeof openOnboardingWizard==='function')openOnboardingWizard();}}
+    {id:'analyze',label:'▶ Анализирай',sub:'Стартирай скан',category:'actions',keywords:'run scan analyze анализ',action:()=>{const b=document.getElementById('run-btn')||document.querySelector('[onclick*="run()"]');if(b&&!b.disabled)b.click();}},
+    {id:'save-scan',label:'💾 Запази скан',sub:'Запази текущия скан в история',category:'actions',keywords:'save scan запази',action:()=>{const b=document.getElementById('btn-save');if(b)b.click();}},
+    {id:'welcome-bonus',label:'💰 Welcome Bonus Battle',sub:'Скрол до сравнение на бонуси',category:'navigation',keywords:'bonus welcome бонус',action:()=>{document.getElementById('welcome-bonus-card')?.scrollIntoView({behavior:'smooth',block:'start'});}},
+    {id:'export',label:'⬇ Експорт',sub:'Свали отчет',category:'actions',keywords:'export download свали отчет',action:()=>{const b=document.getElementById('btn-export');if(b)b.click();}},
+    {id:'full-report',label:'📊 Пълен отчет',sub:'Печатаем HTML/PDF отчет на цялата сесия',category:'actions',keywords:'report отчет full pdf print',action:()=>{if(typeof openFullReportModal==='function')openFullReportModal();}},
+    {id:'ai-analyze',label:'✨ AI Анализ',sub:'Пълен Claude анализ',category:'actions',keywords:'ai claude analyze анализ',action:()=>{if(typeof runAI==='function'&&window.results)runAI(window.results,document.getElementById('claude-token').value.trim());}},
+    {id:'focus',label:'◉ Focus Mode',sub:'Покажи само winners',category:'settings',keywords:'focus mode',action:()=>{if(typeof toggleFocusMode==='function')toggleFocusMode();}},
+    {id:'course',label:'🎓 Курс',sub:'Обучителен курс',category:'help',keywords:'course tutorial курс обучение',action:()=>{if(typeof openCourseModal==='function')openCourseModal();}},
+    {id:'legend',label:'📖 Легенда',sub:'Всички означения',category:'help',keywords:'legend symbols легенда',action:()=>{if(typeof openLegendModal==='function')openLegendModal();}},
+    {id:'theme',label:'🌓 Превключи тема',sub:'Тъмна / Светла',category:'settings',keywords:'theme dark light тема',action:()=>{if(typeof toggleTheme==='function')toggleTheme();}},
+    {id:'help',label:'? Помощ',sub:'Help drawer',category:'help',keywords:'help помощ',action:()=>{if(typeof toggleHelpDrawer==='function')toggleHelpDrawer();}},
+    {id:'search',label:'🔍 Глобално търсене',sub:'Open search overlay',category:'navigation',keywords:'search търси',action:()=>{closeCmdK();if(typeof openGSearch==='function')setTimeout(openGSearch,100);}},
+    {id:'export-data',label:'📤 Експорт всички данни',sub:'GDPR data export',category:'actions',keywords:'export gdpr данни',action:()=>{if(typeof exportAllData==='function')exportAllData();}},
+    {id:'abv',label:'🧪 A/B Variant Inspector',sub:'Преглед на детектирани A/B клъстери',category:'actions',keywords:'ab variant test split',action:()=>{if(typeof openAbvInspector==='function')openAbvInspector();}},
+    {id:'dash-detailed',label:'📊 Изглед: Detailed',sub:'Всички карти видими',category:'settings',keywords:'view layout detailed all карти',action:()=>applyDashPreset('detailed')},
+    {id:'dash-compact',label:'⚡ Изглед: Compact',sub:'Само KPI и AI',category:'settings',keywords:'view layout compact карти',action:()=>applyDashPreset('compact')},
+    {id:'dash-igaming',label:'💰 Изглед: iGaming Focus',sub:'Бонуси + бранд активност',category:'settings',keywords:'view layout igaming карти',action:()=>applyDashPreset('igaming')},
+    {id:'dash-cards',label:'📋 Управление на карти',sub:'Покажи/скрий dashboard карти',category:'settings',keywords:'manage cards layout карти',action:()=>openCardManagerModal()},
+    {id:'onboarding',label:'👋 Покажи onboarding',sub:'Преразгледай wizard-а за първо влизане',category:'help',keywords:'onboarding wizard tour помощ начало',action:()=>{localStorage.removeItem('ads-intel-onboarding-done');if(typeof openOnboardingWizard==='function')openOnboardingWizard();}}
   ];
   actions.forEach(a=>{
     const hay=(a.label+' '+a.sub+' '+(a.keywords||'')).toLowerCase();
     if(!q||hay.includes(q)){
-      items.push({kind:'action',id:a.id,title:a.label,sub:a.sub,icon:'⚡',action:a.action});
+      items.push({kind:'action',id:a.id,title:a.label,sub:a.sub,icon:'⚡',category:a.category||'actions',action:a.action});
     }
   });
 
@@ -13512,6 +13926,10 @@ function openCmdK(){
   const input=document.getElementById('cmdk-input');
   if(!overlay||!input)return;
   overlay.classList.add('open');
+  if(!overlay._releaseFocus){
+    const release=trapFocus(overlay,closeCmdK);
+    overlay._releaseFocus=release;
+  }
   input.value='';
   setTimeout(()=>input.focus(),50);
   renderCmdkResults('');
@@ -13520,6 +13938,7 @@ function openCmdK(){
 function closeCmdK(){
   _cmdkOpen=false;
   const overlay=document.getElementById('cmdk-overlay');
+  if(overlay&&overlay._releaseFocus)overlay._releaseFocus();
   if(overlay)overlay.classList.remove('open');
 }
 
@@ -13535,22 +13954,36 @@ function renderCmdkResults(query){
     return;
   }
 
-  // Group by kind
-  const groups={tab:[],brand:[],action:[],recent:[]};
+  // Group by category (Task 14). When no query, prepend "Скоро използвани".
+  const groups={recent:[],navigation:[],actions:[],settings:[],help:[],brand:[]};
+  const noQuery=!query.trim();
 
-  // Show recent first if no query
-  if(!query.trim()){
+  if(noQuery){
     const recent=getCmdkRecent();
-    recent.slice(0,5).forEach(r=>groups.recent.push(r));
+    // Resolve recent IDs back to live items so actions work
+    recent.slice(0,5).forEach(r=>{
+      const live=items.find(it=>it.kind===r.kind&&it.id===r.id);
+      if(live)groups.recent.push(live);
+      else if(r.action)groups.recent.push(r); // legacy fallback
+    });
   }
-  items.forEach(it=>{groups[it.kind]?.push(it);});
+
+  items.forEach(it=>{
+    if(it.kind==='tab'){groups.navigation.push(it);}
+    else if(it.kind==='brand'){groups.brand.push(it);}
+    else if(it.kind==='action'){
+      const cat=it.category||'actions';
+      (groups[cat]||groups.actions).push(it);
+    }
+  });
 
   let html='';
   let runningIdx=0;
 
   function section(title,arr){
     if(!arr.length)return '';
-    let s=`<div class="cmdk-section-title">${title}</div>`;
+    const sid='cmdk-sec-'+title.toLowerCase().replace(/[^a-z0-9]+/g,'-');
+    let s=`<div role="group" aria-labelledby="${sid}"><div class="cmdk-section-title" id="${sid}">${title}</div>`;
     arr.forEach(it=>{
       const idx=runningIdx++;
       s+=`<div class="cmdk-item${idx===_cmdkActiveIdx?' active':''}" data-idx="${idx}" onmouseenter="cmdkSetActive(${idx})" onclick="cmdkExecAt(${idx})">
@@ -13562,18 +13995,21 @@ function renderCmdkResults(query){
         ${it.shortcut?`<div class="cmdk-item-shortcut">${it.shortcut}</div>`:''}
       </div>`;
     });
+    s+='</div>';
     return s;
   }
 
-  html+=section('Скоро ползвани',groups.recent);
-  html+=section('Табове',groups.tab);
-  html+=section('Брандове',groups.brand);
-  html+=section('Действия',groups.action);
+  html+=section('⏱ Скоро',groups.recent);
+  html+=section('📍 Навигация',groups.navigation);
+  html+=section('★ Брандове',groups.brand);
+  html+=section('⚡ Действия',groups.actions);
+  html+=section('⚙ Настройки',groups.settings);
+  html+=section('❓ Помощ',groups.help);
 
   results.innerHTML=html;
 
-  // Update _cmdkItems to include recent prepended
-  _cmdkItems=[...groups.recent,...groups.tab,...groups.brand,...groups.action];
+  // Update _cmdkItems in render order so keyboard nav matches visual
+  _cmdkItems=[...groups.recent,...groups.navigation,...groups.brand,...groups.actions,...groups.settings,...groups.help];
 }
 
 function cmdkSetActive(idx){
@@ -13638,8 +14074,8 @@ setTimeout(()=>{
 </script>
 
 <!-- Command Palette -->
-<div class="cmdk-overlay" id="cmdk-overlay" onclick="if(event.target===this)closeCmdK()">
-  <div class="cmdk-modal" role="dialog" aria-label="Команден панел">
+<div class="cmdk-overlay" id="cmdk-overlay" role="dialog" aria-modal="true" aria-label="Команден панел" onclick="if(event.target===this)closeCmdK()">
+  <div class="cmdk-modal" style="pointer-events:auto">
     <div class="cmdk-input-wrap">
       <span class="cmdk-input-icon">⌘</span>
       <input type="text" class="cmdk-input" id="cmdk-input" placeholder="Търси команда, бранд или таб..." autocomplete="off">
