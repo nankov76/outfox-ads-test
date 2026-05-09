@@ -4508,7 +4508,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
     <button type="button" class="nav-tab" id="navtab-trends" onclick="switchTab('trends')" data-i18n="nav.trends" role="tab" aria-selected="false" aria-controls="tab-trends">📈 Тренди</button>
     <button type="button" class="nav-tab" id="navtab-alerts" onclick="switchTab('alerts')" data-i18n="nav.alerts" role="tab" aria-selected="false" aria-controls="tab-alerts">Сигнали <span id="nav-alert-badge" style="display:none;background:var(--red);color:#fff;font-size:12px;padding:1px 6px;border-radius:9px;margin-left:4px;font-weight:700">0</span></button>
     <button type="button" class="nav-tab" id="navtab-calendar" onclick="switchTab('calendar')" data-i18n="nav.calendar" role="tab" aria-selected="false" aria-controls="tab-calendar">📅 Календар</button>
-    <button type="button" class="nav-tab nav-more" id="navtab-more" onclick="event.stopPropagation();toggleNavMore()" role="button" aria-haspopup="menu" aria-expanded="false">
+    <div class="nav-tab nav-more" id="navtab-more" tabindex="0" onclick="event.stopPropagation();toggleNavMore()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();toggleNavMore();}" role="button" aria-haspopup="menu" aria-expanded="false" aria-label="Още менюта">
       Още <span style="font-size:10px;margin-left:2px">▾</span>
       <div class="nav-more-menu" id="more-menu">
         <button type="button" class="nav-more-item" onclick="event.stopPropagation();closeNavMore();switchTab('history')">⌛ <span class="nav-more-title">История</span></button>
