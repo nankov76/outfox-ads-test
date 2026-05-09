@@ -4439,6 +4439,15 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
       <button class="btn-sm" onclick="saveOwnBrand()" title="Запази мой бранд">★</button>
     </div>
     <div id="own-brand-status" style="font-size:13px;color:var(--hint);margin-top:4px"></div>
+    <div class="section-label" style="margin-top:8px">Доверени брандове</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">
+      Добави имена на легитимни брандове за да не получават false-positive risk score.
+    </div>
+    <div id="trusted-brands-list" style="font-size:12px;color:var(--muted);margin-bottom:6px"></div>
+    <div class="own-brand-row">
+      <input type="text" id="trusted-brand-inp" placeholder="напр. NewBetBG" onkeydown="if(event.key==='Enter')addTrustedBrandUI()">
+      <button class="btn-sm" onclick="addTrustedBrandUI()" title="Добави към доверени">+</button>
+    </div>
   </div>
 
   <div class="section">
@@ -4659,14 +4668,15 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
         <span class="metric-info" onclick="event.stopPropagation();toggleInfoBubble(this)">?</span>
         <div class="metric-info-bubble">
           <strong>Какво измерва</strong>
-          <p style="margin:0 0 6px">Прогнозна обща инвестиция в показаните реклами (от старт до сега).</p>
+          <p style="margin:0 0 6px">Прогнозен общ медиа-разход за показаните реклами от старт до сега.</p>
           <strong>Как се изчислява</strong>
-          <p style="margin:0 0 6px"><code>Σ (impressions_midpoint × CPM/1000)</code>, където CPM = €1.50–€3.00 за БГ iGaming (взимаме средно €2.25). impressions_midpoint = средна стойност от Meta range.</p>
-          <strong>Пример</strong>
-          <p style="margin:0">5M impressions × €2.25 / 1000 = €11,250. ⚠ Оценка с широка грешка (±40%). За ориентир, не точна стойност.</p>
+          <p style="margin:0 0 6px">Σ (impressions_midpoint × CPM/1000), CPM=€1.50–€3.00 за БГ iGaming.</p>
+          <strong>Точност</strong>
+          <p style="margin:0 0 6px">⚠ Прогноза с широка грешка (±40-60%). Diapazonът отразява несигурността в CPM. Реалният бюджет е извън нашия обхват.</p>
+          <p style="margin:0;color:var(--warning)"><strong>Не е:</strong> точна стойност. Не е verified за RO/GR/RS пазари (CPM=БГ-specific).</p>
         </div>
         <div class="metric-val" id="m6">—</div>
-        <div class="metric-label" data-i18n="metric.estimated-cost">Оценена цена (€)</div>
+        <div class="metric-label" data-i18n="metric.estimated-cost">Прогнозен спенд (€)</div>
       </div>
       </div>
     </div>
@@ -5308,6 +5318,7 @@ function waitForSupabaseCDN(cb,tries=0){
 }
 window.onload=()=>{
   try{applySidebarState();}catch(e){console.warn('[init] applySidebarState failed',e);}
+  try{renderTrustedBrandsList();}catch(e){console.warn('[init] renderTrustedBrandsList failed',e);}
   try{
     const s=localStorage.getItem('ads-intel-v2');
     let d={};
@@ -6233,12 +6244,12 @@ function fd(s){if(!s)return'—';return new Date(s).toLocaleDateString('bg-BG',{
 function days(s){if(!s)return null;return Math.floor((Date.now()-new Date(s))/86400000);}
 
 function classifyAd(c){
-  if(!c)return'brand';
+  if(!c)return null;
   if(/install|app|изтегли|свали/i.test(c))return'app';
   if(/велик|коледа|halloween|christmas|пролет|лято|зима|купа|champion|евро|liga|нова год/i.test(c))return'seasonal';
   if(/нов.*потреб|нов.*играч|регистр|sign up|first|първ.*депозит|welcome|добре дошъл/i.test(c))return'acquisition';
   if(/лоялн|vip|специал.*оферт|само за теб|персонал|cashback|reload/i.test(c))return'retention';
-  return'brand';
+  return null;
 }
 function hook(c){if(!c)return'';const f=c.split(/[.!?]\s/)[0];return f.length>110?f.substring(0,110)+'…':f;}
 function offer(c){if(!c)return null;const m=c.match(/(\d+\s*%|\d+[\s,]*\d*\s*[€$лв]|€\s*\d[\d,\s]*|\d+\s*лв\.?|FREE|безплатн|без депозит|free spin)/i);return m?m[0]:null;}
@@ -6341,23 +6352,21 @@ function buildDensityToggle(){
   </div>`;
 }
 
+// Returns null when Meta does not publish impressions for this ad.
+// Reach-based fallback removed (was using invented 1.3x frequency multiplier).
 function estimateAdSpend(ad){
   if(!ad)return null;
   const CPM_LOW=1.5,CPM_HIGH=3.0;
-  let imprEst=null,confidence='low';
-  if(ad.impr?.lower_bound){
-    imprEst={l:parseInt(ad.impr.lower_bound)||0,u:parseInt(ad.impr.upper_bound)||0};
-    confidence='high';
-  }else if(ad.reach){
-    const r=parseInt(ad.reach)||0;
-    imprEst={l:Math.round(r*1.3),u:Math.round(r*1.3)};
-    confidence='medium';
-  }
-  if(!imprEst)return null;
+  // Only estimate when Meta provides actual impressions range
+  if(!ad.impr?.lower_bound) return null;
+  const imprEst={l:parseInt(ad.impr.lower_bound)||0,u:parseInt(ad.impr.upper_bound)||0};
+  if(!imprEst.l && !imprEst.u) return null;
   return{
     low:Math.round((imprEst.l/1000)*CPM_LOW*100)/100,
     high:Math.round((imprEst.u/1000)*CPM_HIGH*100)/100,
-    confidence
+    confidence:'high',
+    source:'meta_impressions',
+    cpmRange:{low:CPM_LOW,high:CPM_HIGH}
   };
 }
 
@@ -6412,24 +6421,92 @@ function adValueScore(ad,brandIsOfficial){
 }
 
 // Ос 3: Page Risk Score (0-1, higher = riskier) — replaces binary Strict Mode
-const _BRAND_WHITELIST=/inbet|efbet|betano|winbet|slybet|calavera|palms\s*bet|eurobet|sesame|bwin|7777|bet365|unibet/i;
+const _BRAND_WHITELIST_REGEX=/inbet|efbet|betano|winbet|slybet|calavera|palms\s*bet|eurobet|sesame|bwin|7777|bet365|unibet/i;
+const _BRAND_WHITELIST=_BRAND_WHITELIST_REGEX; // legacy alias
+const TRUSTED_BRANDS_KEY='ads-intel-trusted-brands';
+function getTrustedBrands(){
+  try{return JSON.parse(localStorage.getItem(TRUSTED_BRANDS_KEY)||'[]');}
+  catch(e){return[];}
+}
+function setTrustedBrands(arr){
+  localStorage.setItem(TRUSTED_BRANDS_KEY,JSON.stringify(Array.from(new Set(arr.map(s=>s.toLowerCase().trim()).filter(Boolean)))));
+}
+function addTrustedBrand(name){
+  const t=getTrustedBrands();
+  t.push((name||'').toLowerCase().trim());
+  setTrustedBrands(t);
+}
+function isPageTrusted(page){
+  if(!page)return false;
+  if(_BRAND_WHITELIST_REGEX.test(page))return true;
+  const trusted=getTrustedBrands();
+  const p=page.toLowerCase();
+  return trusted.some(t=>t&&p.includes(t));
+}
 function pageRiskScore(ad,allAds){
-  if(!ad)return 0;
+  if(!ad)return{score:0,confidence:'insufficient_data',signals:[]};
   let r=0;
-  if(ad.isShadow)r+=0.4;
-  if(ad.page&&!_BRAND_WHITELIST.test(ad.page))r+=0.15;
-  if(allAds&&allAds.length>=3){
+  const signals=[];
+  if(ad.isShadow){r+=0.40;signals.push('shadow_account');}
+  if(ad.page&&!isPageTrusted(ad.page)){r+=0.05;signals.push('not_in_whitelist');}
+  if(allAds&&allAds.length>=5){
     const shortRunners=allAds.filter(a=>a.days!==null&&a.days<3).length;
-    if(shortRunners/allAds.length>0.6)r+=0.25;
+    if(shortRunners/allAds.length>0.7){r+=0.20;signals.push('high_churn');}
   }
-  if(ad.copy&&/casino|bet|залаг/i.test(ad.copy)&&!ad.destUrl)r+=0.15;
+  if(ad.copy&&/casino|bet|залаг/i.test(ad.copy)&&!ad.destUrl){r+=0.15;signals.push('casino_no_destination');}
   if((typeof getAliases==='function')&&ad.pageId){
     const al=getAliases();
-    if(al&&al[ad.pageId]&&al[ad.pageId]!==ad.page)r+=0.20;
+    if(al&&al[ad.pageId]&&al[ad.pageId]!==ad.page){r+=0.20;signals.push('alias_mismatch');}
   }
-  return Math.max(0,Math.min(1,r));
+  const fired=signals.length;
+  let confidence='low';
+  if(fired===0)confidence='insufficient_data';
+  else if(fired>=3)confidence='high';
+  else if(fired===2)confidence='medium';
+  return{
+    score:Math.max(0,Math.min(1,r)),
+    confidence,
+    signals
+  };
 }
-function risKTier(r){return r<0.2?'safe':r<0.5?'watch':r<0.8?'flag':'block';}
+function pageRiskScoreNum(ad,allAds){
+  const r=pageRiskScore(ad,allAds);
+  return r.score;
+}
+function riskTier(scoreOrObj){
+  if(typeof scoreOrObj==='object'&&scoreOrObj!==null){
+    if(scoreOrObj.confidence==='insufficient_data')return'unknown';
+    return riskTier(scoreOrObj.score);
+  }
+  const r=scoreOrObj;
+  if(r<0.2)return'safe';
+  if(r<0.5)return'watch';
+  if(r<0.8)return'flag';
+  return'block';
+}
+const risKTier=riskTier;
+function renderTrustedBrandsList(){
+  const el=document.getElementById('trusted-brands-list');
+  if(!el)return;
+  const list=getTrustedBrands();
+  if(!list.length){el.innerHTML='<em style="opacity:0.6">Няма добавени доверени брандове</em>';return;}
+  el.innerHTML=list.map(b=>`<span class="chip" style="font-size:11px;padding:2px 8px;margin:2px;display:inline-block">${b}<button class="chip-rm" aria-label="Премахни" onclick="removeTrustedBrand('${b.replace(/'/g,'')}')">×</button></span>`).join('');
+}
+function addTrustedBrandUI(){
+  const i=document.getElementById('trusted-brand-inp');
+  const v=i&&i.value&&i.value.trim();
+  if(!v){if(typeof toast==='function')toast('Въведи име на бранд','warning');return;}
+  addTrustedBrand(v);
+  if(i)i.value='';
+  renderTrustedBrandsList();
+  if(typeof toast==='function')toast('Добавен в доверени','success');
+  if(window.results&&window.results.length&&typeof renderDash==='function')renderDash(window.results);
+}
+function removeTrustedBrand(name){
+  setTrustedBrands(getTrustedBrands().filter(b=>b!==name));
+  renderTrustedBrandsList();
+  if(window.results&&window.results.length&&typeof renderDash==='function')renderDash(window.results);
+}
 
 // ═══ ETAP 2 — PRIVACY & SECURITY ═══
 const _ALL_LS_KEYS=[
@@ -6724,7 +6801,7 @@ function analyze(ads,name){
     const d=days(a.ad_delivery_start_time);
     const pn=(a.page_name||'').toLowerCase();
     const isShadow=a._fromAlias||!isOfficialPage(a);
-    return{copy:raw,date:a.ad_delivery_start_time,page:a.page_name,pageId:a.page_id||null,destUrl:(a.ad_creative_link_urls||[])[0]||null,url:a.ad_snapshot_url,plats:a.publisher_platforms||[],spend:a.spend,impr:a.impressions,reach:a.eu_total_reach,days:d,type:classifyAd(raw),hook:hook(raw),offer:offer(raw),isNew:d!==null&&d<=7,isWinner:i===0,isShadow};
+    return{copy:raw,date:a.ad_delivery_start_time,page:a.page_name,pageId:a.page_id||null,destUrl:(a.ad_creative_link_urls||[])[0]||null,url:a.ad_snapshot_url,plats:a.publisher_platforms||[],spend:a.spend,impr:a.impressions,reach:a.eu_total_reach,days:d,type:classifyAd(raw),hook:hook(raw),offer:offer(raw),isNew:d!==null&&d<=7,isWinner:d!==null&&d>=30&&(a.publisher_platforms||[]).length>=2,isShadow};
   };
   // A/B variant counter — count ads with same destUrl+page (indicates split testing / budget weight)
   const _variantMap={};
@@ -6739,8 +6816,8 @@ function analyze(ads,name){
   const officialCopies=officialSrt.slice(0,12).map(makeCopy);
   const shadowCopies=[...aliasSrt,...shadowSrt].slice(0,Math.max(0,12-officialCopies.length)).map(makeCopy);
   const copies=[...officialCopies,...shadowCopies];
-  // Recalculate isWinner based on final order
-  copies.forEach((c,i)=>{c.isWinner=i===0&&!c.isShadow;});
+  // isWinner uses objective signal: long-running (>=30d) on multiple platforms; shadow ads excluded
+  copies.forEach(c=>{c.isWinner=c.days!==null&&c.days>=30&&(c.plats||[]).length>=2&&!c.isShadow;});
   // Compute scoring axes for each copy + A/B variant count + persona
   const officialIds=new Set(officialSrt.map(a=>a.page_id||a.page_name));
   copies.forEach(c=>{
@@ -6748,8 +6825,11 @@ function analyze(ads,name){
     c.wps=winnerProbability(c);
     c.wpsTier=wpsTier(c.wps);
     c.alv=adValueScore(c,brandIsOfficial);
-    c.pls=pageRiskScore(c,copies);
-    c.risk=risKTier(c.pls);
+    const _plsObj=pageRiskScore(c,copies);
+    c.pls=_plsObj.score;
+    c.plsConfidence=_plsObj.confidence;
+    c.plsSignals=_plsObj.signals;
+    c.risk=riskTier(_plsObj);
     const variantKey=(c.pageId||c.page||'')+'|'+(c.destUrl||'');
     c.variants=_variantMap[variantKey]||1;
     if(c.isShadow){
@@ -7296,9 +7376,16 @@ function renderDash(res){
   document.getElementById('m1').textContent=tot;
   document.getElementById('m2').textContent=act;
   document.getElementById('m3').textContent=maxWd?maxWd+' дни':'—';
-  document.getElementById('m4').textContent=totSpend?'€'+fm(totSpend)+'+':'—';
+  document.getElementById('m4').textContent=totSpend?'≥€'+fm(totSpend):'—';
   document.getElementById('m5').textContent=totNew;
-  document.getElementById('m6').textContent=estSpends.length>0?'€'+fm(totEstLow)+'-'+fm(totEstHigh):'—';
+  const m6el=document.getElementById('m6');
+  if(estSpends.length>0){
+    m6el.textContent='≈€'+fm(totEstLow)+'-'+fm(totEstHigh);
+    m6el.title='Базиран на '+estSpends.length+' реклами с impressions данни';
+  }else{
+    m6el.textContent='—';
+    m6el.title='Няма реклами с публикувани impressions данни от Meta';
+  }
   const metricsWrapper=document.getElementById('metrics-row-wrapper');
   if(metricsWrapper)metricsWrapper.style.display='';
   const metricsRow=document.getElementById('metrics-row');
@@ -7339,7 +7426,7 @@ function renderDash(res){
         <button class="btn-tiny" onclick="sortBonusTable('confidence')">По увереност</button>
       </div>
       <div id="welcome-bonus-table-host"></div>
-      <div class="welcome-bonus-disclaimer">⚠ Извлечените стойности са от рекламните текстове в Meta Ad Library. За точни условия (wager, минимален депозит, срок) провери официалния сайт на бранда.</div>
+      <div class="welcome-bonus-disclaimer">⚠ Извлечените стойности са от рекламните текстове в Meta Ad Library. Само редове с висока/средна увереност показват числа. Редовете с ниска увереност (—) са включени за прозрачност, но не се показват числа за избягване на грешни сравнения.</div>
     </div>
     <div id="benchmarks-panel-mount" data-dash-card="benchmarks"></div>`;
   // Build charts (called after html is written to dash-content below)
@@ -7457,7 +7544,7 @@ function renderAdList(r,col){
         ${ad.isNew?'<span class="type-tag t-new">НОВА</span>':''}
         ${alvBadge}
         ${variantBadge}
-        <span class="type-tag ${TC[ad.type]||'t-brd'}">${TL[ad.type]||ad.type}</span>
+        ${ad.type?`<span class="type-tag ${TC[ad.type]||'t-brd'}">${TL[ad.type]||ad.type}</span>`:'<span class="type-tag" style="opacity:.5">—</span>'}
         ${ad.days!==null?`<span style="font-size:12px;color:var(--hint)">${ad.days} дни</span>`:''}
       </div>
       <div class="ad-copy">${hiCopy(ad.copy)||'<span style="color:var(--muted);font-style:italic">няма copy</span>'}</div>
@@ -7618,7 +7705,7 @@ function renderCopyCards(copies){
         <div class="cc-dot" style="background:${ad.color}"></div>
         <div class="cc-brand">${ad.brand}</div>
         <div style="flex:1"></div>
-        <span class="type-tag ${TC[ad.type]||'t-brd'}" style="font-size:12px">${TL[ad.type]||ad.type}</span>
+        ${ad.type?`<span class="type-tag ${TC[ad.type]||'t-brd'}" style="font-size:12px">${TL[ad.type]||ad.type}</span>`:`<span class="type-tag" style="font-size:12px;opacity:.5">—</span>`}
       </div>
       <div class="cc-text">${hiCopy(ad.copy)}</div>
       <div class="cc-meta">
@@ -8461,6 +8548,8 @@ ${snap.platforms.map(p=>`• ${p.platform}: ${p.count}`).join('\n')}
 ТОП 8 HOOKS (сортирани по сила):
 ${snap.topHooks.map((h,i)=>`${i+1}. [${h.days}д, WPS ${h.wps}%${h.offer?', оферта: '+h.offer:''}] "${h.hook}"`).join('\n')}
 
+ВАЖНО: Полетата WPS, дни активност, и оферти са платформени евристики (regex/threshold), не валидирани измервания. Формулирай изводите като "по индикатори", не "доказано". Ако данни за този бранд са под 10 реклами, изрично отбележи "ограничен sample".
+
 ИЗИСКВАНИЯ КЪМ PLAYBOOK-А (HTML формат):
 1. <h2>Executive Summary</h2> — 2-3 изречения
 2. <h2>Top Hooks Анализ</h2> — анализирай патърните в техните най-силни hooks (НЕ само ги избройвай — обясни защо работят)
@@ -8945,12 +9034,13 @@ async function runAI(res,token,opts){
         topAds:allCopies.slice(0,8).map((c,i)=>({
           rank:i+1,
           copy:c.copy?.substring(0,300)||'',
-          hook:c.hook||null,
-          offer:c.offer||null,
-          type:c.type||null,
+          first_sentence:c.hook||null,
+          detected_offer:c.offer||null,
+          type_guess:c.type||null,
           daysActive:c.days||null,
-          isWinner:c.isWinner||false,
-          platforms:c.plats||[]
+          long_running_signal:c.isWinner||false,
+          platforms:c.plats||[],
+          _heuristic_note:'type_guess and long_running_signal are platform-computed heuristics, not validated measurements'
         })),
         // всички уникални хукове
         allHooks:allHooks.slice(0,10),
@@ -8991,6 +9081,23 @@ ${JSON.stringify(sum,null,2)}
 
 ЗАБОРАВЕНО: "X е лидер защото има повече реклами" или "Y е изоставен защото има малко"
 ПРАВИЛНО: Обемът може да означава — интензивно тестване, сегментация, разпределение на бюджет между множество аудитории, или просто разлики в стратегия — НЕ успех.
+
+═════════════════════════════════════════════════════════════════
+
+ВАЖНО — ИНТЕРПРЕТАЦИЯ НА ПОЛЕТА:
+
+В JSON-а получаваш няколко полета които са ЕВРИСТИЧНИ оценки от платформата, не валидирани измервания:
+- type_guess: regex keyword classification. Може да е грешен. Ако е null — няма ясна категория, не предполагай.
+- long_running_signal: true ако реклама е >=30 дни И е на >=2 платформи. Това е сигнал, не "winner status".
+- first_sentence: първо изречение от ad copy (до 110 символа). Не е семантичен hook — може да е "Здравейте!" или generic CTA.
+- detected_offer: regex match на първа €/% стойност. Често бърка jackpot mention с bonus value.
+- impressions/spend: Meta-публикувани диапазони (lower-upper). Когато липсват — рекламата няма да се появи в ALV/spend изчисления.
+
+ВИНАГИ:
+1. Формулирай изводите като "по индикатори от платформата", "наличните данни предполагат", "възможно е" — НЕ "доказано е".
+2. Ако type_guess е null или first_sentence е под 20 символа — третирай тези реклами като "недостатъчно сигнал" не като "brand awareness".
+3. Когато броят на реклами е под 5 за бранд — изрично кажи "малка sample size, изводите за този бранд са ограничени".
+4. Ако не виждаш силен сигнал в данните за конкретна секция — кажи "недостатъчно данни за извод" вместо да измислиш.
 
 ═════════════════════════════════════════════════════════════════
 
@@ -9038,8 +9145,11 @@ ${JSON.stringify(sum,null,2)}
 Какво НЕ можем да видим само от Ads Library? (landing page experience, post-click conversion flow, retargeting, email follow-up, LTV фактори). Защо изводите са НАСОЧВАЩИ, не финални? Какви други данни биха ни помогнали да преценим по-точно?
 
 УВЕРЕНОСТ по секции:
-- За всяка секция добавяй на края: "Увереност: висока/средна/ниска" базирано на количеството данни
-- Ако имаш под 10 реклами от даден бранд — не правиш категорични изводи за него
+В края на всяка секция включи "Увереност: висока/средна/ниска" по следните правила:
+- ВИСОКА: имаш ≥10 реклами от бранда + ≥3 различни hook формулировки + impressions/spend данни
+- СРЕДНА: 5-9 реклами или smesени signals
+- НИСКА: <5 реклами ИЛИ повечето type_guess са null ИЛИ повечето first_sentence са <20 символа
+- НЕДОСТАТЪЧНИ ДАННИ: 0-2 реклами — кажи това директно, не правиш изводи
 
 Бъди prescriptive и директен. Ако нещо е ясна разлика от данните (КАЧЕСТВО, тактика) — кажи го без резерви.`;
 
@@ -9221,7 +9331,7 @@ function exportMd(){
     if(r.wd)md+=`Winner: ${r.wd}д активна\n`;
     if(r.st)md+=`Харчене: €${fm(r.st.l)}–€${fm(r.st.u)}\n`;
     md+='\n';
-    r.copies.slice(0,5).forEach((ad,i)=>{md+=`**${i+1}. [${fd(ad.date)}]${ad.isWinner?' 🏆':''} [${ad.type}]**\n${ad.copy||'—'}\n${ad.url?`[Виж](${ad.url})\n`:''}\n`;});
+    r.copies.slice(0,5).forEach((ad,i)=>{md+=`**${i+1}. [${fd(ad.date)}]${ad.isWinner?' 🏆':''} [${ad.type||'—'}]**\n${ad.copy||'—'}\n${ad.url?`[Виж](${ad.url})\n`:''}\n`;});
     md+='---\n\n';
   });
   const ai=document.getElementById('ai-body')?.textContent;
@@ -13350,6 +13460,13 @@ function renderWelcomeBonusTable(){
     return;
   }
 
+  const highMedRows=rows.filter(r=>r.confidence==='high'||r.confidence==='medium').length;
+  if(highMedRows===0){
+    host.innerHTML=`<div class="welcome-bonus-empty">⚠ Не са открити welcome bonus оферти с висока увереност в текущите реклами. Възможно е брандовете да не рекламират welcome бонуси в момента, или офертите да са в landing страниците (не в ad copy).</div>`;
+    card.style.display='block';
+    return;
+  }
+
   window._bonusRows=rows;
   sortBonusTable('value');
   card.style.display='block';
@@ -13360,6 +13477,9 @@ function sortBonusTable(by){
   if(by==='brand')rows.sort((a,b)=>a.brand.localeCompare(b.brand,'bg'));
   else if(by==='confidence'){const cw={high:3,medium:2,low:1};rows.sort((a,b)=>cw[b.confidence]-cw[a.confidence]);}
   else rows.sort((a,b)=>{
+    const cw={high:3,medium:2,low:1};
+    const cd=(cw[b.confidence]||0)-(cw[a.confidence]||0);
+    if(cd!==0)return cd;
     const aV=(a.amountEUR||0)+(a.percentMatch||0)*5+(a.freeSpins||0);
     const bV=(b.amountEUR||0)+(b.percentMatch||0)*5+(b.freeSpins||0);
     return bV-aV;
@@ -13385,17 +13505,26 @@ function sortBonusTable(by){
         </tr>
       </thead>
       <tbody>
-        ${rows.map(r=>`
+        ${rows.map(r=>{
+          const showVal=(val,unit)=>{
+            if(r.confidence==='low')return '<span style="color:var(--muted);opacity:0.55" title="Ниска увереност — стойността не е показана">—</span>';
+            return val?val+unit:'—';
+          };
+          const showAmount=()=>{
+            if(r.confidence==='low')return '<span style="color:var(--muted);opacity:0.55" title="Ниска увереност — стойността не е показана">—</span>';
+            return r.amountEUR?'€'+r.amountEUR+(r.amountCurrency==='BGN'?' <span style="font-size:10px;color:var(--muted)">(BGN)</span>':''):'—';
+          };
+          return `
           <tr>
             <td class="wb-brand">${(r.brand||'').replace(/[<>]/g,'')}<div class="wb-snippet">${(r.snippet||'').substring(0,140).replace(/[<>]/g,'')}…</div></td>
-            <td class="wb-amount">${r.amountEUR?'€'+r.amountEUR:'—'}${r.amountCurrency==='BGN'?' <span style="font-size:10px;color:var(--muted)">(BGN)</span>':''}</td>
-            <td class="wb-pct">${r.percentMatch?r.percentMatch+'%':'—'}</td>
-            <td class="wb-fs">${r.freeSpins?r.freeSpins+' FS':'—'}</td>
-            <td>${r.minDeposit?'€'+r.minDeposit:'—'}</td>
-            <td>${r.wagerMultiplier?r.wagerMultiplier+'x':'—'}</td>
+            <td class="wb-amount">${showAmount()}</td>
+            <td class="wb-pct">${showVal(r.percentMatch,'%')}</td>
+            <td class="wb-fs">${showVal(r.freeSpins,' FS')}</td>
+            <td>${showVal(r.minDeposit,'€')}</td>
+            <td>${showVal(r.wagerMultiplier,'x')}</td>
             <td><span class="wb-conf ${cb[r.confidence]}">${cl[r.confidence]}</span></td>
           </tr>
-        `).join('')}
+        `;}).join('')}
       </tbody>
     </table>
     </div>`;
