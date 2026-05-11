@@ -42,14 +42,15 @@ const HELP_CONTENT={
       {
         title:'Какво виждаш',
         items:[
-          '<strong>📰 Story Layer (Седмично обобщение):</strong> AI-генерирано обобщение на върха на Dashboard. Показва какво се е променило vs предишен скан + 1 препоръка за действие. Изисква Claude API ключ. Auto-генерира се след всеки скан, кеширан в localStorage.',
-          '<strong>5 Metric Cards:</strong> общо реклами, активни брандове, най-дълъг winner, мин. бюджет, нови за 7 дни',
+          '<strong>📰 Story Layer (Седмично обобщение):</strong> AI-генерирано обобщение на върха на Dashboard. 60-90 дума, цитира конкретни брандове и числа, завършва с един actionable препоръка. Confidence badge (висока/средна/ниска/недостатъчно данни). Auto-генерира се след всеки скан, кеширан в localStorage. Позволява ↻ manuel refresh. Изисква Claude API ключ. Отказва да генерира при <10 ads или <2 brands.',
+          '<strong>5 Metric Cards:</strong> общо реклами, активни брандове, най-дълъг winner, мин. бюджет, нови за 7 дни. Всяка карта има × hide бутон горе-десен. User menu → Dashboard Изглед → 3 presets (Detailed/Compact/iGaming Focus) + "Управление на карти" модал + "↻ Възстанови всички".',
           '<strong>Timeline (30 скана):</strong> история по дни, всеки бранд = отделна линия',
           '<strong>Ad Presence by Brand:</strong> хоризонтални барове сравнение SoV (Share of Voice). Зеленото ↑ = ръст vs предишен скан',
           '<strong>AI Summary:</strong> Claude генерира top 4 инсайта — кой пуска най-много, кой намалява, доминиращ тип, препоръка',
           '<strong>Brand Cards:</strong> per-brand reklami с пълен scoring profile (WPS, ALV, варианти, persona)',
           '<strong>🕸 Shadow Network Graph:</strong> интерактивен SVG граф на връзките между официалните и shadow страниците (общи домейни, оферти, hooks, alias). Бутонът се появява в брандовия филтър ред когато има поне 1 shadow реклама.',
-          '<strong>📊 BG iGaming Benchmarks:</strong> агрегира текущия скан + историята в локални индустриални benchmarks (avg longevity, winner rate, peak day, WPS дистрибуция, best offers) — точността расте след 5+ скана.'
+          '<strong>📊 BG iGaming Benchmarks:</strong> агрегира текущия скан + историята в локални индустриални benchmarks (avg longevity, winner rate, peak day, WPS дистрибуция, best offers) — точността расте след 5+ скана.',
+          '<strong>💰 Welcome Bonus Battle:</strong> Таблица с regex-извлечени welcome бонуси (€/BGN суми, %, free spins, min deposit, wager). Сортируема. Низка confidence → показва "—" вместо измислени стойности.'
         ]
       },
       {
@@ -82,10 +83,10 @@ const HELP_CONTENT={
         items:[
           '<strong>Активни реклами:</strong> Брой реклами в Meta Ad Library с status=ACTIVE към момента на скана за избраните брандове. Сума от <code>count</code> полето за всеки бранд.',
           '<strong>Брандове с реклами:</strong> Колко от избраните брандове върнаха поне една активна реклама. Филтър <code>count > 0</code> върху избраните.',
-          '<strong>Winner (дни активна):</strong> Най-дълго работещата реклама в текущия скан — индикатор за winning creative. <code>max(daysActive)</code> сред всички. Дълга активност означава, че бранда я счита за работеща.',
-          '<strong>Мин. бюджет (€/мес):</strong> Минималният месечен бюджет, оценен от Meta-публикувания spend range (долна граница). ⚠ Това е МИНИМУМ. Реалният бюджет често е 2-5x повече.',
+          '<strong>Winner (дни активна):</strong> Най-дълго работещата реклама в текущия скан — индикатор за winning creative. Изисква обективни сигнали: дни ≥ 30 И платформи ≥ 2. Дълга активност означава, че бранда я счита за работеща.',
+          '<strong>Мин. бюджет (€/мес):</strong> Минималният месечен бюджет, оценен от Meta-публикувания spend range (долна граница). Маркиран като "<strong>≥€X</strong>" (математическа нотация за долна граница). ⚠ Това е МИНИМУМ. Реалният бюджет често е 2-5x повече.',
           '<strong>Нови (7 дни):</strong> Реклами стартирали през последните 7 дни — сигнал за нова кампания или тест. Филтър <code>ad_creation_date >= днес−7дни</code>.',
-          '<strong>Оценена цена (€):</strong> Прогнозна обща инвестиция в показаните реклами (от старт до сега). <code>Σ (impressions_midpoint × CPM/1000)</code> с CPM = €2.25 за БГ iGaming. ⚠ Оценка с широка грешка (±40%).'
+          '<strong>Прогнозен спенд (€):</strong> Маркиран като "≈€X-Y" range prefix. Прогнозна обща инвестиция в показаните реклами (от старт до сега) — НО само когато има Meta-публикувани impressions данни. Когато няма данни, показва "—" с tooltip "Няма реклами с публикувани impressions данни". <code>Σ (impressions_midpoint × CPM/1000)</code> с CPM = €2.25 за БГ iGaming. ⚠ Оценка с широка грешка (±40-60%).'
         ]
       }
     ]
@@ -259,6 +260,83 @@ const HELP_CONTENT={
           '<strong>🔄 Обнови от Sports API:</strong> Fetch-ва от TheSportsDB (Premier League, La Liga, UCL, NBA, F1, и т.н.) с точни часове',
           '<strong>Click на ден:</strong> Отваря popover с пълен списък + "+ Добави" с pre-filled дата',
           '<strong>Football-Data.org интеграция (опционална):</strong> Добави API ключ в Settings → Football-Data.org за по-точни часове на срещите в БГ часова зона. Безплатен ключ се взима от football-data.org/client. Когато е наличен, бутонът "🔄 Обнови от Sports API" комбинира данни от TheSportsDB + FDO.'
+        ]
+      }
+    ]
+  },
+  'data-honesty':{
+    label:'📊 Данни и честност',
+    desc:'Обяснение на всички heuristic сигнали, кога да вярваш на данни и кога да проверяваш външно. Разлика между сигналния резултат и вероятност.',
+    sections:[
+      {
+        title:'WPS / ALV / PLS са СИГНАЛИ, не валидирани вероятности',
+        body:'<strong>КРИТИЧНО:</strong> WPS 0.85 <strong>НЕ значи</strong> "85% шанс да спечели реклама". Това е <strong>взеден сигнален резултат</strong> — композитен скор от множество индикатори (дни активна, наличие на оферта, брой платформи, impressions).<br><br><strong>Какво значи:</strong> Реклама с WPS 0.85 има ВИСОК комбиниран сигнал, че ще се превърне в дълготрайна реклама. <strong>По индикатори,</strong> не като вероятност от примерни тестове.<br><br><strong>Същото за:</strong><ul><li><strong>ALV (1-10):</strong> Стойност на рекламата базирана на дължина, брой платформи, reach. Не е "10 = определено печеливша".</li><li><strong>PLS (0-1):</strong> Риск сигнал. 0.5 = "внимание нужно", не "50% шанс за скам".</li></ul>'
+      },
+      {
+        title:'Кога показваме "—" вместо число',
+        items:[
+          '<strong>classifyAd връща null → "—":</strong> Ad type classification не се получи (нямаше keyword match). Преди версия 3 по подразбиране беше "brand", което създаде ~40% false-positives. Сега показваме честно "—".',
+          '<strong>estimateAdSpend връща null → "—":</strong> В m6 "Прогнозен спенд" когато нямаме Meta impressions данни за рекламата. Преди версия 3 измислахме estimate (reach × 1.3). Сега показваме "—" с tooltip "Няма реклами с публикувани impressions данни".',
+          '<strong>Принцип:</strong> "—" е <strong>по-добре</strong> от погрешно число. Прозрачност > fabrication.'
+        ]
+      },
+      {
+        title:'isWinner: обективни сигнали, не позиционирани',
+        items:[
+          '<strong>Преди:</strong> Първа реклама в Meta API резултатите е била маркирана "WINNER" — позиционна грешка.',
+          '<strong>Сега:</strong> Реклама е WINNER само ако дни ≥ 30 И платформи ≥ 2. Обективни пътища, независимо от позиция.',
+          '<strong>Значение:</strong> "WINNER" бандер сега говори за реално доказана дължина, не за排列ност.'
+        ]
+      },
+      {
+        title:'Trusted Brands: бял списък за намаляване на false-flags',
+        items:[
+          '<strong>Какво прави:</strong> Sidebar section "Trusted Brands" позволява да добавиш известни, легитимни брандове. PLS-ът им не получава наказание за shadow-подобност.',
+          '<strong>Тежина намалена:</strong> Whitelist weight = 0.05 (преди беше 0.15) — все още имаме консервативна позиция, но не разчитаме твърде много на whitelist.',
+          '<strong>Use case:</strong> Ако имаш собствен бранд или партньор, добави го да не бъде фалшиво флагван като рисков.'
+        ]
+      },
+      {
+        title:'AI prompt филдове пристигат "по индикатори"',
+        items:[
+          '<strong>Claude сигналния контекст:</strong> Вместо <code>type, hook, isWinner, offer</code>, Claude получава <code>type_guess, first_sentence, long_running_signal, detected_offer</code>.',
+          '<strong>Примерно указание:</strong> "Интерпретирай type_guess като хипотеза, не като факт. Дай препоръки по индикатори, не на абсолютни търпения".',
+          '<strong>Резултат:</strong> AI анализ е по-осторожен, избягва overconfidence за слабо валидирани сигнали.'
+        ]
+      }
+    ]
+  },
+  'mobile':{
+    label:'📱 Мобилен и Responsive',
+    desc:'Адаптивност под 900px viewport, sidebar drawer, swipe жестове, keyboard shortcuts.',
+    sections:[
+      {
+        title:'Sidebar Drawer (<900px)',
+        body:'На мобилни и мальки екрани, sidebar-ът е скрит по подразбиране. Кликни <strong>☰ (хамбургер)</strong> горе-ляво на navbar-а за да отвориш страничен drawer. Backdrop затъмнява основния контент. Натисни Esc или кликни извън за да затвориш.'
+      },
+      {
+        title:'Keyboard навигация',
+        items:[
+          '<strong>⌘K / Ctrl+K:</strong> Command Palette от всяко място',
+          '<strong>Стрелки ← →:</strong> Навигирай между горните табове (Dashboard, Креативи, Тренди и т.н.)',
+          '<strong>Home / End:</strong> Скачай към първия / последния таб',
+          '<strong>Esc:</strong> Затвори отворени модали (курс, помощ, A/B Inspector и т.н.)'
+        ]
+      },
+      {
+        title:'Фокус трап и Accessibility',
+        items:[
+          '<strong>Modal focus trap:</strong> Когато модал е отворен (курс, календар, auth, error, A/B Inspector), Tab навигира само с елементи в модала. Фокусът не "излиза" навън.',
+          '<strong>ARIA роли:</strong> Модали имат role="dialog", aria-modal="true", aria-controls за свързване на header-button с body контент.',
+          '<strong>Роving tabindex:</strong> Таб-ове използват roving tabindex pattern — един таб е focusable наведнъж, стрелките го преместват.'
+        ]
+      },
+      {
+        title:'Responsive карти и компактност',
+        items:[
+          '<strong>Card стакиране:</strong> На мобилни (< 600px), карти вероятно ще се показват 1 на ред вместо 2-3.',
+          '<strong>Density toggle (Креативи):</strong> Compact / Standard / Gallery режимите се адаптират. Compact е най-добър за мобилен.',
+          '<strong>Dashboard presets:</strong> iGaming Focus preset е оптимизиран за мобилни — показва само KPI + AI обобщение.'
         ]
       }
     ]
@@ -2032,6 +2110,396 @@ const COURSE_LESSONS=[
       correct:1,
       explanation:'Auto-scan автоматично извиква run() функцията на зададения интервал (6/12/24/48 часа). Изисква приложението да е отворено в браузъра. Комбинирай с Telegram за да получаваш известия без активно следене.'
     }
+  },
+  {
+    id:'story-layer',
+    icon:'📰',
+    title:'📰 Story Layer — твоят weekly briefing',
+    duration:'5 мин',
+    difficulty:'Начинаещ',
+    objectives:[
+      'Какво е Story Layer и кога се генерира',
+      'Как се чита confidence badge-ът',
+      'Какво значи "по индикатори" при четене на обобщението',
+      'Кога Story Layer отказва да генерира'
+    ],
+    content:`
+      <h3>Какво е Story Layer?</h3>
+      <p><strong>Story Layer</strong> е AI-генерирано текстово обобщение (60-90 думи) което се появява в началото на Dashboard-а след всеки анализ. Цель: да ти разкаже какво се е променило vs предишния скан + един actionable препоръка — без да трябва да четеш 50 карти с реклами.</p>
+
+      <h3>Как работи</h3>
+      <ol>
+        <li><strong>Auto-генерира:</strong> След всеки успешен анализ (скан), платформата автоматично изпълнява Claude API за да генерира обобщението</li>
+        <li><strong>Кеширано:</strong> Резултатът се запазва в localStorage — следващото зареждане показва кеширания вариант веднага</li>
+        <li><strong>Цитира:</strong> Обобщението спомена конкретни брандове и числа (напр. "Betano добави 5 нови реклами")</li>
+        <li><strong>Завършва препоръка:</strong> "Препоръчаме проверка на..." или "Тест хипотеза: промотирай ..."</li>
+      </ol>
+
+      <h3>Confidence Badge</h3>
+      <p>Всяко обобщение има цветна значка отдясно:</p>
+      <ul>
+        <li><strong>🟢 Висока:</strong> ≥10 ads + ≥3 distinct hooks + impressions данни е налична</li>
+        <li><strong>🟡 Средна:</strong> 5-9 ads ИЛИ 2 hooks</li>
+        <li><strong>🔴 Ниска:</strong> <5 ads ИЛИ 1 hook</li>
+        <li><strong>⚫ Недостатъчно данни:</strong> Нулеви реклами или нулеви hooks</li>
+      </ul>
+      <p>Confidence не значи "верност". Дори "Висока" е обобщение по индикатори, не гарантирана прогноза.</p>
+
+      <h3>"По индикатори" — важна дистинкция</h3>
+      <p>Когато прочетеш Story Layer, помни че Claude работи с <strong>сигналния контекст</strong>, не със факти:</p>
+      <ul>
+        <li><strong>Вход:</strong> type_guess (хипотеза, не classification), first_sentence (extractен текст, но може да е намален), long_running_signal (composite от дни + платформи), detected_offer (regex-базирана, не гарантирана)</li>
+        <li><strong>Изход:</strong> "По индикатори, Inbet показва тренд към retention messaging" — това означава сигналите наподобяват retention, но нямаме 100% потвърждение</li>
+      </ul>
+
+      <h3>Кога Story Layer отказва</h3>
+      <ul>
+        <li><strong>&lt;10 ads общо:</strong> "Недостатъчно данни за обобщение" — повече брандове ще добавят контекст</li>
+        <li><strong>&lt;2 distinct brands:</strong> "Еденичен бранд — не може да се направи сравнение"</li>
+        <li><strong>Няма Claude token:</strong> "API ключ отсъства — Story Layer е отключен"</li>
+      </ul>
+
+      <h3>Refresh бутон</h3>
+      <p>Вдясно на обобщението е иконката ↻. Кликни за да генерираш ново обобщение, отхвърлянето кеш и викане Claude отново. Полезно ако искаш алтернативна гледна точка.</p>
+
+      <div class="course-tip">
+        💡 <strong>Използване:</strong> Story Layer е началната точка. Вътрешен — разгледай детайлите в Dashboard картите. Ако confidence е "Ниска", полагай се по-малко на препоръката.
+      </div>
+    `,
+    quiz:{
+      q:'Story Layer показва "Висока" confidence. Какво означава това?',
+      options:[
+        'Обобщението е 100% верно',
+        '≥10 ads + ≥3 distinct hooks + impressions данни. Но все пак е обобщение по индикатори, не гарантирано',
+        'Само един бранд',
+        'Няма данни'
+      ],
+      correct:1,
+      explanation:'"Висока" confidence = достатъчно данни за обобщение. Но Story Layer работи по индикатори, не като научно верифицирана прогноза. Винаги провери детайлите в Dashboard картите.'
+    }
+  },
+  {
+    id:'data-honesty',
+    icon:'🔍',
+    title:'🔍 Как да четеш данните — heuristics vs реалност',
+    duration:'8 мин',
+    difficulty:'Напреднал',
+    objectives:[
+      'Разлика между WPS kao вероятност и WPS като signal score',
+      'Защо "—" е по-добре от измислено число',
+      'Когато да вярваш на type_guess и когато да проверяваш външно',
+      'Trusted Brands whitelist за намаляване на false-flags'
+    ],
+    content:`
+      <h3>КРИТИЧНО: WPS не е вероятност</h3>
+      <p><strong>Често заблуждение:</strong> "Реклама с WPS 0.85 има 85% шанс да спечели."</p>
+      <p><strong>Реалност:</strong> WPS 0.85 е <strong>взеден сигнален резултат</strong> — композитен скор от множество индикатори (дни активна, наличие на оферта, брой платформи, impressions). Работи <strong>по индикатори</strong>, не като вероятност от примерни тестове или A/B резултати.</p>
+
+      <h3>WPS Индикатори (преразглеждане)</h3>
+      <ul>
+        <li>≥30 дни активна: +0.45 (СИЛЕН сигнал)</li>
+        <li>14-29 дни: +0.25 | 7-13 дни: +0.10</li>
+        <li>Има оферта: +0.15</li>
+        <li>Силен hook (>20 символа): +0.10</li>
+        <li>≥2 платформи: +0.10</li>
+        <li>Тип brand/promo: +0.10</li>
+        <li>Impressions >50k: +0.10</li>
+        <li>Shadow penalty: -0.20</li>
+      </ul>
+      <p><strong>Преводът:</strong> Дълга активност означава "бранда продължава да я пуска" → сигнал че е печеливша. Това е логика, не математическа вероятност.</p>
+
+      <h3>ALV и PLS — също сигнали, не факти</h3>
+      <ul>
+        <li><strong>ALV (1-10):</strong> Ad Value Score. Дължина на реклама + брой платформи + reach. ALV 9 не значи "определено отличен" — значи "високи индикатори".</li>
+        <li><strong>PLS (0-1):</strong> Page Risk Score. Сума от shadow сигнали, burn pattern, alias mismatch. PLS 0.6 не значи "60% шанс на scam" — значи "внимание: няколко риск индикатора присъстват".</li>
+      </ul>
+
+      <h3>Кога показваме "—" вместо число</h3>
+      <p><strong>Принцип:</strong> Прозрачност > fabrication. Честно "не знаем" > измислено число.</p>
+
+      <h4>classifyAd връща null → Type показва "—"</h4>
+      <ul>
+        <li><strong>Причина:</strong> Ad copy не съдържаше достатъчно keyword matches за класификация (acquisition / retention / brand / promo / seasonal).</li>
+        <li><strong>Преди:</strong> По подразбиране беше "brand" → ~40% false-positives (копирах неправилно)</li>
+        <li><strong>Сега:</strong> Показваме честно "—"</li>
+        <li><strong>Действие:</strong> Прочетеш copy сам → определи типа. Или игнорирай type filtera за точна реклама.</li>
+      </ul>
+
+      <h4>estimateAdSpend връща null → m6 показва "—"</h4>
+      <ul>
+        <li><strong>Причина:</strong> Meta не е публикувала impressions данни за тази реклама</li>
+        <li><strong>Преди:</strong> Измисляхме estimate (reach × 1.3 CPM)</li>
+        <li><strong>Сега:</strong> Показваме "—" с tooltip "Няма реклами с публикувани impressions данни"</li>
+        <li><strong>Действие:</strong> Игнорирай spend оценката. Фокусирай се на други факти: дни, платформи, copy силност.</li>
+      </ul>
+
+      <h3>isWinner: обективни критерии, не позиционирани</h3>
+      <ul>
+        <li><strong>Преди:</strong> Първа реклама в Meta API резултатите получаваше "WINNER" бандер. Позиционна грешка.</li>
+        <li><strong>Сега:</strong> Реклама е WINNER само ако дни ≥ 30 И платформи ≥ 2. Обективни пътища.</li>
+        <li><strong>Значение:</strong> "WINNER" бандер сега говори за реално доказана дължина + multi-platform presence.</li>
+      </ul>
+
+      <h3>Trusted Brands: бял списък за намаляване на false-flags</h3>
+      <p>В sidebar, виждаш нов раздел "Trusted Brands". Позволява да добавиш известни, легитимни брандове (твоя, партньори, известни операции).</p>
+      <ul>
+        <li><strong>Какво прави:</strong> PLS-ът им не получава наказание за "shadow-подобност"</li>
+        <li><strong>Тежина:</strong> Whitelist weight е намалена на 0.05 (преди 0.15) — все още консервативни, не разчитаме твърде на списъка</li>
+        <li><strong>Use case:</strong> Собствен бранд, партньорска операция. Добави го за да не бъде фалшиво FLAG-ван.</li>
+      </ul>
+
+      <h3>AI Prompt Context: "по индикатори"</h3>
+      <p>Когато Claude генерира Story Layer, Playbook или AI анализ, той получава контекст като:</p>
+      <ul>
+        <li><code>type_guess</code> (не type) — хипотеза, не класификация</li>
+        <li><code>first_sentence</code> (не full hook) — extractен, но може да е намален</li>
+        <li><code>long_running_signal</code> (не isWinner) — дни + платформи, не binary флаг</li>
+        <li><code>detected_offer</code> (не гарантирана оферта) — regex-базирана, може да е false-positive</li>
+      </ul>
+      <p><strong>Резултат:</strong> AI анализ избягва overconfidence. "По индикатори, Betano показва…" не "Betano ОПРЕДЕЛЕНО…"</p>
+
+      <div class="course-action">
+        🎯 <strong>Опитай:</strong> Отвори Dashboard → сравни WPS 0.85 реклама с WPS 0.4 реклама → обърни внимание на разликите в дни, платформи, оферта. Това са индикаторите, не магия.
+      </div>
+    `,
+    quiz:{
+      q:'Brand X има WPS 0.85. Какво означава точно?',
+      options:[
+        'Има 85% шанс да спечели реклама',
+        'Висок комбиниран сигнал (по индикатори) че ще се превърне в дълготрайна реклама. НЕ вероятност.',
+        'Определено ще печели',
+        'Рискова реклама'
+      ],
+      correct:1,
+      explanation:'WPS е signal score, не вероятност. 0.85 означава дни ≥30, оферта, ≥2 платформи и други индикатори наподобяват "winner behavior". Но не е гарантирано — все още реалния свят е хаотичен.'
+    }
+  },
+  {
+    id:'dashboard-customization',
+    icon:'🎨',
+    title:'🎨 Кастомизация на Dashboard — карти, presets, видимост',
+    duration:'6 мин',
+    difficulty:'Начинаещ',
+    objectives:[
+      'Как се скриват/показват карти с × бутон',
+      'Как се избират Dashboard presets (Detailed/Compact/iGaming Focus)',
+      'Как работи "Управление на карти" модала',
+      '"Възстанови всички" за reset на изгледа'
+    ],
+    content:`
+      <h3>Hide Карти на Dashboard</h3>
+      <p>Всяка Dashboard карта (Story Layer, Metric Cards, Timeline, Ad Presence, Brand Cards и т.н.) има малък × бутон в горния десен ъгъл.</p>
+      <ul>
+        <li><strong>Кликни ×:</strong> Картата се скрива</li>
+        <li><strong>Запазва се:</strong> Избора ти в localStorage — следващо посещение запомня кои карти си скрил</li>
+        <li><strong>Обратно:</strong> User Menu → Dashboard Изглед → "Управление на карти" модал → рехетави боксовете</li>
+      </ul>
+
+      <h3>Dashboard Presets (User Menu)</h3>
+      <p>Кликни на user avatar горе-десен → <strong>"Изглед на Dashboard"</strong>. 3 preset варианта + управление:</p>
+
+      <h4>🎨 Detailed (подразбиран)</h4>
+      <p>Показва ВСЕ: Story Layer, 5 Metric Cards, Timeline, Ad Presence, AI Summary, Brand Cards, Benchmarks, A/B Clusters, Shadow Network Graph. За дълбок анализ.</p>
+
+      <h4>📱 Compact</h4>
+      <p>Показва само: Story Layer, 5 Metric Cards, AI Summary (без Brand Cards, без Timeline детайли). Идеално за мобилни или бързи преглеждания.</p>
+
+      <h4>🎰 iGaming Focus</h4>
+      <p>Показва: Story Layer, 5 Metric Cards, AI Summary, iGaming Benchmarks (без Brand Cards, без Timeline). За при focus на индустриални KPI и тренди.</p>
+
+      <h3>"Управление на карти" Модал</h3>
+      <p>Отвори с User Menu → Dashboard Изглед → "⚙ Управление на карти".</p>
+      <ul>
+        <li>Списък от ВСЕ Dashboard карти</li>
+        <li>Чекбокс за всяка → чекнато = видима</li>
+        <li>Кликни "Прилагай" за да запазиш</li>
+        <li>Или просто затвори модала — промените са автоматични</li>
+      </ul>
+
+      <h3>"↻ Възстанови всички" — Reset на изгледа</h3>
+      <p>В User Menu → Dashboard Изглед. Бутон <strong>"↻ Възстанови всички"</strong>.</p>
+      <ul>
+        <li>Връща ВСЕ карти в Detailed preset-а</li>
+        <li>Изтрива всички скрит/customization настройки</li>
+        <li>Полезно ако си забъркал изглед и искаш да си върнеш по подразбиране</li>
+      </ul>
+
+      <h3>Съхранение на преи</h3>
+      <p>Dashboard кастомизация се запазва в localStorage key <code>ads-intel-dashboard-prefs</code>:</p>
+      <ul>
+        <li>Скритите карти</li>
+        <li>Избраният preset</li>
+        <li>Density mode (Compact/Standard/Gallery) в Креативи</li>
+        <li>Последния sort order</li>
+      </ul>
+
+      <div class="course-tip">
+        💡 <strong>Съвет:</strong> Ако със колеги имате различни потребности (един вължда Compact за бързи проверки, друг Detailed за анализ), всеки човек запазва своя настройка. Кастомизирайте веднъж,享受 завинаги.
+      </div>
+    `,
+    quiz:{
+      q:'Кой Dashboard preset показва само KPI + AI обобщение без Brand Cards?',
+      options:['Detailed','Compact','iGaming Focus','All'],
+      correct:1,
+      explanation:'Compact показва Story Layer, 5 Metric Cards, AI Summary — без Brand Cards детайли или Timeline. Идеално за мобилни или бързи преглеждания.'
+    }
+  },
+  {
+    id:'welcome-bonus-battle',
+    icon:'💰',
+    title:'💰 Welcome Bonus Battle — извличане и четене на оферти',
+    duration:'5 мин',
+    difficulty:'Начинаещ',
+    objectives:[
+      'Какво е Welcome Bonus Battle таблица',
+      'Какво regex-а извлича (суми, %, free spins)',
+      'Как се чита confidence column',
+      'Кога стойностите показват "—" вместо число'
+    ],
+    content:`
+      <h3>Какво е Welcome Bonus Battle?</h3>
+      <p>Специализирана таблица на Dashboard-а която извлича и агрегира <strong>welcome bonus предложения</strong> от всички ad copies в текущия скан. Идеално за:</p>
+      <ul>
+        <li>Конкурентен анализ на bonus стратегия</li>
+        <li>Виждане на най-популярните оферти по брой конкурици</li>
+        <li>Открииване на нови bonus типове</li>
+      </ul>
+
+      <h3>Какво regex-а извлича</h3>
+      <p>Системата търси и парсва:</p>
+      <ul>
+        <li><strong>Суми в €/BGN:</strong> "€50 бонус", "200 BGN" и т.н.</li>
+        <li><strong>Процентни бонуси:</strong> "100% бонус", "200%" и т.н.</li>
+        <li><strong>Free Spins:</strong> "50 free spins", "FS" и т.н.</li>
+        <li><strong>Deposit Requirements:</strong> "мин. депозит €10" и т.н.</li>
+        <li><strong>Wager Multipliers:</strong> "30x wager", "1x play-through" и т.н.</li>
+      </ul>
+
+      <h3>Таблица Структура</h3>
+      <ul>
+        <li><strong>Offer:</strong> Извлечения бонус текст (напр. "100% до €100")</li>
+        <li><strong>Type:</strong> Класификация (BONUS_PERCENT, BONUS_EUR, FREE_SPINS и т.н.)</li>
+        <li><strong>Brands:</strong> Колко бранда го предлагат</li>
+        <li><strong>Confidence:</strong> Сигурност на извличането (Висока / Средна / Ниска)</li>
+        <li><strong>Details:</strong> Допълнителни условия (ако са намерени)</li>
+      </ul>
+
+      <h3>Confidence Column</h3>
+      <p>Не всички regex извличания са еднакво надежни:</p>
+      <ul>
+        <li><strong>🟢 Висока:</strong> Ясна, четима offer синтаксис. Напр. "100% бонус до €100"</li>
+        <li><strong>🟡 Средна:</strong> Offer е намерена, но може да има амбигюитет. Напр. "до €200" без тип</li>
+        <li><strong>🔴 Ниска:</strong> Regex е открила pattern, но е възможен false-positive. Показва "—" вместо стойност за да будиш честна.</li>
+      </ul>
+
+      <h3>Кога показваме "—" вместо число</h3>
+      <ul>
+        <li><strong>Confidence ниска:</strong> Стойностите показват "—" за да не разпространявам потенциално неверни данни</li>
+        <li><strong>Няма данни:</strong> Ако никой ad не съдържа welcome bonus mention, таблицата е празна или показва "Няма открити оферти"</li>
+        <li><strong>Принцип:</strong> "—" е по-добре от измислено число. Ако не сме сигурни, казваме честно.</li>
+      </ul>
+
+      <h3>Сортиране на таблицата</h3>
+      <ul>
+        <li>Кликни на колона header за сортиране (Offer, Type, Brands, Confidence)</li>
+        <li>Default sort: по брой brands (descending) — най-популярните оферти отгоре</li>
+      </ul>
+
+      <div class="course-action">
+        🎯 <strong>Опитай:</strong> Направи scan → сърчай "Welcome Bonus Battle" на Dashboard-а → вижи какви оферти конкурентите пускат → забележи confidence индикатори → определи дали е безопасно да копираш.
+      </div>
+    `,
+    quiz:{
+      q:'Welcome Bonus Battle открива "100% до €100" с Confidence "Ниска". Какво трябва да направиш?',
+      options:[
+        'Копирай веднага — е популярна',
+        'Провери ручно в ad copy-то. Може да е false-positive от regex.',
+        'Игнорирай — сигурно е грешка',
+        'Кажи на CLI да я изтрие'
+      ],
+      correct:1,
+      explanation:'Ниска confidence значи regex е открила pattern, но може да бъде false-positive. Виж оригиналния ad copy за да потвърдиш че oferта е реална.'
+    }
+  },
+  {
+    id:'keyboard-a11y',
+    icon:'⌨️',
+    title:'⌨️ Keyboard навигация и достъпност (A11y)',
+    duration:'4 мин',
+    difficulty:'Напреднал',
+    objectives:[
+      'Tab стрелки за навигиране между горните табове',
+      'Home/End за скачане към първия/последния таб',
+      'Esc за затваряне на модали',
+      'Focus trap и roving tabindex pattern',
+      'Command Palette (⌘K) като главен входен момент'
+    ],
+    content:`
+      <h3>Горни Табове (Dashboard, Креативи, Тренди и т.н.)</h3>
+      <p>Първо кликни на един таб за да го фокусираш (или натисни ⌘K за да го избереш).</p>
+      <ul>
+        <li><strong>Стрелка ← / →:</strong> Премести фокуса към предишния / следващия таб</li>
+        <li><strong>Home:</strong> Скачай към първия таб (обичайно Dashboard)</li>
+        <li><strong>End:</strong> Скачай към последния таб (обичайно Легенда)</li>
+        <li><strong>Интеграция:</strong> Tabs използват roving tabindex pattern — един таб е tabindex="0", останалите са -1. Стрелката го преместват правилно.</li>
+      </ul>
+
+      <h3>Модали (Курс, Помощ, Auth, Error, A/B Inspector)</h3>
+      <ul>
+        <li><strong>Esc:</strong> Затвори модала веднага</li>
+        <li><strong>Tab within modal:</strong> Фокусът остава ограничен в модала (focus trap). Не излиза в главния контент.</li>
+        <li><strong>Last interactive element → Tab:</strong> Фокусът обхвща към първия element в модала (циклично)</li>
+      </ul>
+
+      <h3>Command Palette (⌘K / Ctrl+K)</h3>
+      <p>Натисни <strong>⌘K</strong> (Mac) или <strong>Ctrl+K</strong> (Windows/Linux) от всяко място.</p>
+      <ul>
+        <li><strong>↑ / ↓:</strong> Навигирай резултатите без мишка</li>
+        <li><strong>Enter:</strong> Избери текущо резултата</li>
+        <li><strong>Esc:</strong> Затвори палитата</li>
+        <li><strong>Fuzzy search:</strong> Пиши във входната поле — резултатите се филтрират в реално време</li>
+        <li><strong>Групи:</strong> ⏱ Скоро, 📍 Навигация, ⚡ Действия, ⚙ Настройки, ❓ Помощ</li>
+      </ul>
+
+      <h3>ARIA Roles и Attributes</h3>
+      <p>Платформата използува:</p>
+      <ul>
+        <li><strong>role="dialog":</strong> На модали</li>
+        <li><strong>aria-modal="true":</strong> Указва че то е модална</li>
+        <li><strong>aria-controls:</strong> Свързва header бутон със body контент</li>
+        <li><strong>aria-expanded:</strong> На accordions (Help Drawer) — указва отворено/затворено</li>
+        <li><strong>aria-label / aria-labelledby:</strong> За иконични бутони без текст</li>
+      </ul>
+
+      <h3>Тъмна/Светла Тема и Контраст</h3>
+      <ul>
+        <li>Бутонът ☀ / 🌙 в navbar-а превключва тема</li>
+        <li>Запазва се в localStorage</li>
+        <li>Цветовите контрастни са проверени за WCAG AA (4.5:1 за text, 3:1 за UI components)</li>
+      </ul>
+
+      <h3>Screen Reader Hints</h3>
+      <ul>
+        <li><strong>Badges и иконки:</strong> Имат aria-label (напр. 🟢 = "Winner Probability Premium")</li>
+        <li><strong>Tables:</strong> Имат &lt;caption&gt; и &lt;thead&gt; / &lt;tbody&gt; за правилна структура</li>
+        <li><strong>Lists:</strong> &lt;ul&gt; / &lt;ol&gt; структура е съхранена</li>
+      </ul>
+
+      <div class="course-tip">
+        💡 <strong>Съвет:</strong> ⌘K е най-мощния инструмент за keyboard-first работа. Запомни го на памет, и почти всичко може да направиш без мишка.
+      </div>
+    `,
+    quiz:{
+      q:'Какво е "Focus trap" в модала?',
+      options:[
+        'Модалът се блокира',
+        'Tab навигация остава ограничена в модала — не излиза в главния контент',
+        'Мишката не работи',
+        'Не може да затвориш модала'
+      ],
+      correct:1,
+      explanation:'Focus trap е a11y техника. Когато модал е отворен, Tab ци преминава само през интерактивни елементи в модала. Последният елемент → Tab → първия елемент (циклично). Защитава достъпност за keyboard users.'
+    }
   }
 ];
 
@@ -2057,7 +2525,7 @@ function openCourseModal(){
             <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--amber),#e0851a);display:flex;align-items:center;justify-content:center;font-size:20px">🎓</div>
             <div style="flex:1;min-width:0">
               <div class="course-title">Обучителен курс — outfox ads</div>
-              <div class="course-subtitle">10 интерактивни лекции · ~50 минути общо</div>
+              <div class="course-subtitle">20 интерактивни лекции · ~100 минути общо</div>
             </div>
           </div>
           <div class="course-progress-wrap">
