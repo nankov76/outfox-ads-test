@@ -4764,30 +4764,199 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
 .help-acc-body.open{display:block}
 /* ── Cmd+K Section Headers (Task 14) ── */
 .cmdk-section-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;padding:10px 14px 6px}
-/* ── Story Layer — AI-generated weekly summary ── */
-.story-layer-card{background:linear-gradient(135deg,rgba(245,166,35,0.06) 0%,rgba(77,159,255,0.04) 100%);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:12px;padding:18px 22px;margin:0 0 18px;position:relative;transition:all 0.2s}
-.story-layer-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.15)}
-.story-layer-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px;flex-wrap:wrap}
-.story-layer-title{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px}
-.story-layer-icon{font-size:18px}
-.story-layer-confidence{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-left:4px}
-.story-layer-confidence.conf-high{background:rgba(110,231,183,0.15);color:#6ee7b7;border:1px solid rgba(110,231,183,0.4)}
-.story-layer-confidence.conf-medium{background:rgba(245,166,35,0.15);color:var(--amber);border:1px solid rgba(245,166,35,0.4)}
-.story-layer-confidence.conf-low{background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.4)}
-.story-layer-confidence.conf-insufficient{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
-.story-layer-actions{display:flex;align-items:center;gap:10px}
-.story-layer-meta{font-size:11px;color:var(--muted);font-family:var(--mono,monospace)}
-.story-layer-refresh{background:transparent;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
-.story-layer-refresh:hover{background:var(--surface2);color:var(--text);border-color:var(--amber)}
-.story-layer-refresh.spinning{animation:story-spin 1s linear infinite}
+/* ── Story Layer — Editorial weekly briefing (Bloomberg/Linear hybrid) ── */
+.story-layer-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:24px 28px 22px;
+  margin:0 0 20px;
+  position:relative;
+  transition:border-color 200ms ease;
+}
+.story-layer-card:hover{border-color:var(--border2)}
+.story-layer-card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;
+  width:36px;
+  height:1px;
+  background:var(--amber);
+}
+.story-layer-eyebrow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.story-layer-eyebrow-left{
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.story-layer-kicker{
+  font-size:10px;
+  font-weight:700;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:1.4px;
+  font-family:var(--mono,ui-monospace,SFMono-Regular,monospace);
+}
+.story-layer-title{
+  font-size:11px;
+  font-weight:600;
+  color:var(--text);
+  text-transform:uppercase;
+  letter-spacing:0.8px;
+  opacity:0.92;
+}
+.story-layer-confidence{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-size:10px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.6px;
+  padding:0;
+  background:none;
+  border:none;
+  border-radius:0;
+}
+.story-layer-confidence::before{
+  content:'';
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  display:inline-block;
+  flex-shrink:0;
+}
+.story-layer-confidence.conf-high{color:#6ee7b7}
+.story-layer-confidence.conf-high::before{background:#6ee7b7;box-shadow:0 0 0 3px rgba(110,231,183,0.15)}
+.story-layer-confidence.conf-medium{color:var(--amber)}
+.story-layer-confidence.conf-medium::before{background:var(--amber);box-shadow:0 0 0 3px rgba(245,166,35,0.15)}
+.story-layer-confidence.conf-low{color:#f87171}
+.story-layer-confidence.conf-low::before{background:#f87171;box-shadow:0 0 0 3px rgba(248,113,113,0.15)}
+.story-layer-confidence.conf-insufficient{color:var(--muted)}
+.story-layer-confidence.conf-insufficient::before{background:var(--muted)}
+.story-layer-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.story-layer-meta{
+  font-size:10.5px;
+  color:var(--muted);
+  font-family:var(--mono,ui-monospace,SFMono-Regular,monospace);
+  letter-spacing:0.2px;
+  font-variant-numeric:tabular-nums;
+}
+.story-layer-refresh{
+  background:transparent;
+  border:0;
+  color:var(--muted);
+  width:24px;
+  height:24px;
+  cursor:pointer;
+  font-size:13px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:4px;
+  transition:color 150ms ease, background 150ms ease;
+  padding:0;
+}
+.story-layer-refresh:hover{color:var(--amber);background:rgba(245,166,35,0.08)}
+.story-layer-refresh.spinning{animation:story-spin 900ms linear infinite}
 @keyframes story-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-.story-layer-body{font-size:14.5px;line-height:1.65;color:var(--text);font-family:var(--font-body,-apple-system,system-ui,sans-serif)}
-.story-layer-body strong{color:var(--amber);font-weight:700}
-.story-layer-body em.story-recommendation{display:block;margin-top:10px;padding:8px 12px;background:var(--surface);border-left:2px solid var(--amber);border-radius:4px;font-style:normal;font-size:13.5px;color:var(--text)}
-.story-layer-empty{font-size:13px;color:var(--muted);font-style:italic;line-height:1.55;padding:6px 0}
-.story-layer-loading{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:6px 0}
-.story-layer-loading .spinner{width:14px;height:14px;border-width:2px}
-.story-layer-disclaimer{font-size:11px;color:var(--muted);font-style:italic;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);opacity:0.8}
+.story-layer-body{
+  font-size:16px;
+  line-height:1.65;
+  color:var(--text);
+  font-family:'Iowan Old Style','Charter','Georgia',ui-serif,serif;
+  max-width:72ch;
+  font-feature-settings:"kern" 1,"liga" 1,"onum" 1;
+}
+.story-layer-body p{margin:0 0 10px}
+.story-layer-body p:last-child{margin-bottom:0}
+.story-layer-body strong{
+  color:var(--text);
+  font-weight:600;
+  background:linear-gradient(transparent 62%,rgba(245,166,35,0.18) 62%,rgba(245,166,35,0.18) 92%,transparent 92%);
+  padding:0 1px;
+}
+.story-layer-body em.story-recommendation{
+  display:block;
+  margin-top:18px;
+  padding:0 0 0 18px;
+  border-left:2px solid var(--amber);
+  font-style:italic;
+  font-size:15.5px;
+  font-family:'Iowan Old Style','Charter','Georgia',ui-serif,serif;
+  color:var(--text);
+  line-height:1.55;
+  background:none;
+  border-radius:0;
+}
+.story-layer-body em.story-recommendation::before{
+  content:'Препоръка \00B7 ';
+  font-family:var(--mono,monospace);
+  font-size:10px;
+  font-weight:700;
+  font-style:normal;
+  color:var(--amber);
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  display:block;
+  margin-bottom:4px;
+}
+.story-layer-empty{
+  font-size:14.5px;
+  line-height:1.6;
+  color:var(--muted);
+  font-family:'Iowan Old Style','Charter','Georgia',ui-serif,serif;
+  font-style:italic;
+  padding:4px 0;
+  max-width:60ch;
+}
+.story-layer-loading{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:13px;
+  color:var(--muted);
+  padding:4px 0;
+  font-family:var(--mono,monospace);
+  letter-spacing:0.3px;
+}
+.story-layer-loading .spinner{width:13px;height:13px;border-width:1.5px}
+.story-layer-disclaimer{
+  font-size:10px;
+  color:var(--muted);
+  margin-top:18px;
+  padding-top:14px;
+  border-top:1px solid var(--border);
+  letter-spacing:0.5px;
+  text-transform:uppercase;
+  font-weight:500;
+  opacity:0.75;
+  font-family:var(--mono,ui-monospace,SFMono-Regular,monospace);
+  line-height:1.6;
+}
+@media (max-width:640px){
+  .story-layer-card{padding:18px 18px 16px}
+  .story-layer-body{font-size:15px;line-height:1.6}
+  .story-layer-eyebrow{margin-bottom:10px}
+  .story-layer-actions{gap:10px}
+}
+html[data-theme="light"] .story-layer-card{background:#FFFFFF;border-color:#E5E7EB}
+html[data-theme="light"] .story-layer-card:hover{border-color:#D1D5DB}
+html[data-theme="light"] .story-layer-body{color:#0F172A}
+html[data-theme="light"] .story-layer-body strong{background:linear-gradient(transparent 62%,rgba(245,166,35,0.28) 62%,rgba(245,166,35,0.28) 92%,transparent 92%)}
+html[data-theme="light"] .story-layer-disclaimer{border-top-color:#E5E7EB}
 </style>
 </head>
 <body>
@@ -5059,10 +5228,10 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
     <!-- Story Layer — AI-generated weekly summary (always visible, empty state when no scan) -->
     <div class="story-layer-card" id="story-layer-card" data-dash-card="story-layer">
       <button class="dash-card-hide" onclick="hideDashCard('story-layer')" aria-label="Скрий тази карта">×</button>
-      <div class="story-layer-header">
-        <div class="story-layer-title">
-          <span class="story-layer-icon">📰</span>
-          <span>Седмично обобщение</span>
+      <div class="story-layer-eyebrow">
+        <div class="story-layer-eyebrow-left">
+          <span class="story-layer-kicker">BRIEF</span>
+          <span class="story-layer-title">Седмично обобщение</span>
           <span class="story-layer-confidence" id="story-layer-conf"></span>
         </div>
         <div class="story-layer-actions">
@@ -5071,7 +5240,7 @@ mark.ad-match{background:var(--amber-dim);color:var(--amber);border-radius:3px;p
         </div>
       </div>
       <div class="story-layer-body" id="story-layer-body">
-        <div class="story-layer-empty">📊 Стартирай анализ за персонализирано седмично обобщение. Story Layer използва Claude AI за да обобщи какво се е променило и какво да направиш.</div>
+        <div class="story-layer-empty">Стартирай анализ за персонализирано седмично обобщение. AI ще обобщи какво се е променило в конкурентната активност и ще даде една конкретна препоръка за действие.</div>
       </div>
     </div>
     <div class="dash-hero-header">
