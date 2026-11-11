@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-11-11T13:04:24.921Z",
+  "country": "BG",
+  "source": "auto-scan",
+  "brands": [],
+  "errors": [
+    {
+      "brand": "efbet",
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AEgQbA1J2Yix0olEp6xpUuy\"}}"
+    },
+    {
+      "brand": "betano",
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AoxkgFHnGLYKjhxfPWXguWi\"}}"
+    },
+    {
+      "brand": "winbet",
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AwND3O6Sbu752kDCMqYsHhr\"}}"
+    },
+    {
+      "brand": "palms bet",
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"ATs4ZXGvSug-2uMfQ2kfOMb\"}}"
+    },
+    {
+      "brand": "inbet",
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"ACA2GJk_Dt1LDZOF8ZtW7FO\"}}"
+    },
+    {
+      "brand": "bet365",
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"A2Tqyts_AitijFVt03FBAVS\"}}"
+    },
+    {
+      "brand": "sesame",
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"Angdjg5TU4--iZFGFrzwFvA\"}}"
+    }
+  ]
+}

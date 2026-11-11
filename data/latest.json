@@ -1,36 +1,36 @@
 {
-  "timestamp": "2026-11-10T13:52:33.852Z",
+  "timestamp": "2026-11-11T13:04:24.921Z",
   "country": "BG",
   "source": "auto-scan",
   "brands": [],
   "errors": [
     {
       "brand": "efbet",
-      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"Ae2c2VEHB00hmsSmw89Mlze\"}}"
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AEgQbA1J2Yix0olEp6xpUuy\"}}"
     },
     {
       "brand": "betano",
-      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AMsjc1kjQ2nVjlrp27z_zsM\"}}"
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AoxkgFHnGLYKjhxfPWXguWi\"}}"
     },
     {
       "brand": "winbet",
-      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AZw9G_iAHkvh1_h5qg-3_tT\"}}"
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AwND3O6Sbu752kDCMqYsHhr\"}}"
     },
     {
       "brand": "palms bet",
-      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AO6G0DTtxC8T1pS237maloB\"}}"
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"ATs4ZXGvSug-2uMfQ2kfOMb\"}}"
     },
     {
       "brand": "inbet",
-      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"AiMkhb6wSnRn8rAKCRZaX23\"}}"
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"ACA2GJk_Dt1LDZOF8ZtW7FO\"}}"
     },
     {
       "brand": "bet365",
-      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"Ag5CuJx7guoEP9fmVrQppSR\"}}"
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"A2Tqyts_AitijFVt03FBAVS\"}}"
     },
     {
       "brand": "sesame",
-      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"A9NxZpR0brgDnL6B5N1srEs\"}}"
+      "error": "API 400: {\"error\":{\"message\":\"Bad signature\",\"type\":\"OAuthException\",\"code\":190,\"fbtrace_id\":\"Angdjg5TU4--iZFGFrzwFvA\"}}"
     }
   ]
 }
